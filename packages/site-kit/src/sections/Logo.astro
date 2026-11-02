@@ -17,9 +17,10 @@ const { clair = false, class: classe = "" } = Astro.props;
       clair ? "bg-accent-sur-sombre text-sombre" : "bg-sombre text-accent-sur-sombre",
     ]}>{initiales(nom)}</span
   >
-  <span class="flex min-w-0 flex-col leading-none">
-    <span class:list={["line-clamp-2 font-titres text-base leading-[1.1] font-bold tracking-tight sm:truncate sm:text-lg sm:leading-none", clair ? "text-sur-sombre" : "text-encre"]}>{nom}</span>
-    <span class:list={["mt-1 truncate text-[0.8125rem]", clair ? "text-sur-sombre-doux" : "text-encre-douce"]}>
+  <!-- Interlignes ≥ 1,2 : « truncate » coupe ce qui dépasse, dont les accents des capitales (É). -->
+  <span class="flex min-w-0 flex-col">
+    <span class:list={["line-clamp-2 font-titres text-base leading-[1.25] font-bold tracking-tight sm:truncate sm:text-lg sm:leading-[1.25]", clair ? "text-sur-sombre" : "text-encre"]}>{nom}</span>
+    <span class:list={["mt-0.5 truncate text-[0.8125rem] leading-[1.35]", clair ? "text-sur-sombre-doux" : "text-encre-douce"]}>
       {site.entreprise.metierLibelle}<span class="hidden sm:inline"> · {site.zone.commune.nom}</span>
     </span>
   </span>

@@ -35,7 +35,7 @@ const agenceUrl = site.demo.agenceUrl ?? "https://liverdian.fr";
     <dt>Email</dt>
     <dd>{e.email ? <a href={`mailto:${e.email}`}>{e.email}</a> : manque("adresse email")}</dd>
     <dt>SIREN{e.siret && " / SIRET"}</dt>
-    <dd>{sirenFr(e.siren)}{e.siret && <> / {e.siret}</>}</dd>
+    <dd>{e.siren ? sirenFr(e.siren) : manque("SIREN")}{e.siret && <> / {e.siret}</>}</dd>
     <dt>Immatriculation</dt>
     <dd>{registre ?? manque("n° RCS ou RM")}</dd>
     {

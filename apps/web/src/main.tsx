@@ -6,6 +6,7 @@ import { LiveProvider } from "./live.tsx";
 import { initPrefs } from "./prefs.ts";
 import { ToastProvider } from "./ui/toasts.tsx";
 import "./styles.css";
+import "./atelier.css";
 
 initPrefs();
 

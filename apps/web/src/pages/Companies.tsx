@@ -172,7 +172,8 @@ function Row({ label, value, source, children }: { label: string; value?: ReactN
 
 function CompanyDetail({ id, onClose, onEdit }: { id: string | null; onClose: () => void; onEdit: (c: Company) => void }) {
   const toast = useToast();
-  const { data, error } = useApi<{ company: Company; sites: Site[]; jobs: Job[]; activite: HubEvent[] }>(id ? `/api/companies/${id}` : null, ["companies", "sites"]);
+  const { data, error } = useApi<{ company: Company; maquette: { possible: boolean; manques: string[] }; sites: Site[]; jobs: Job[]; activite: HubEvent[] }>(id ? `/api/companies/${id}` : null, ["companies", "sites"]);
+  const [lancement, setLancement] = useState(false);
   const c = data?.company.id === id ? data.company : null;
   const [confirmDelete, setConfirmDelete] = useState(false);
   useEffect(() => setConfirmDelete(false), [id]);
@@ -186,14 +187,17 @@ function CompanyDetail({ id, onClose, onEdit }: { id: string | null; onClose: ()
       toast.error((e as Error).message);
     }
   };
-  const createSite = async () => {
+  const createMaquette = async () => {
     if (!c) return;
+    setLancement(true);
     try {
-      const r = await api.post<{ site: Site }>("/api/sites", { companyId: c.id, recette: "vitrine-artisan" });
-      toast.ok("Site créé (brouillon)");
+      const r = await api.post<{ site: Site }>(`/api/companies/${c.id}/maquette`, { recette: "vitrine-artisan" });
+      toast.ok("Maquette lancée : l'atelier s'en occupe");
       navigate(`/sites/${r.site.id}`);
     } catch (e) {
       toast.error((e as Error).message);
+    } finally {
+      setLancement(false);
     }
   };
   const remove = async () => {
@@ -208,6 +212,7 @@ function CompanyDetail({ id, onClose, onEdit }: { id: string | null; onClose: ()
   };
 
   const hours = c ? Object.entries(c.horaires).filter(([, v]) => v) : [];
+  const enCours = !!data?.sites.some((s) => s.statut === "en_fabrication");
   return (
     <Drawer
       open={!!id}
@@ -242,12 +247,14 @@ function CompanyDetail({ id, onClose, onEdit }: { id: string | null; onClose: ()
                   <Icon name="trash" size={15} />
                 </button>
                 <span className="foot-spacer" />
-                <button className="btn btn-ghost" onClick={createSite}>
-                  <Icon name="sites" size={15} /> Créer un site
-                </button>
-                <button className="btn btn-primary" onClick={() => onEdit(c)}>
+                <button className="btn btn-ghost" onClick={() => onEdit(c)}>
                   <Icon name="edit" size={15} /> Modifier
                 </button>
+                <span className="tip-wrap" title={data?.maquette.possible ? undefined : `Il manque ${data?.maquette.manques.join(", ")}`}>
+                  <button className="btn btn-primary" disabled={!data?.maquette.possible || lancement || enCours} onClick={createMaquette} aria-describedby={data?.maquette.possible ? undefined : "maquette-manques"}>
+                    <Icon name={lancement ? "spinner" : "wand"} size={15} className={lancement ? "spin" : undefined} /> Créer la maquette
+                  </button>
+                </span>
               </>
             )}
           </>
@@ -265,6 +272,20 @@ function CompanyDetail({ id, onClose, onEdit }: { id: string | null; onClose: ()
               </button>
             ))}
           </div>
+
+          {!data.maquette.possible ? (
+            <div className="hint-box" id="maquette-manques" role="note">
+              <Icon name="info" size={15} />
+              <span>
+                « Créer la maquette » demande {data.maquette.manques.join(", ")}. <button className="inline-link" onClick={() => onEdit(c)}>Compléter la fiche</button>
+              </span>
+            </div>
+          ) : enCours ? (
+            <div className="hint-box" role="note">
+              <Icon name="spinner" size={15} className="spin" />
+              <span>Une maquette est en fabrication pour cette entreprise.</span>
+            </div>
+          ) : null}
 
           <div className="quick-actions">
             {c.telephone && (
@@ -344,7 +365,7 @@ function CompanyDetail({ id, onClose, onEdit }: { id: string | null; onClose: ()
           <section className="detail-group">
             <h3>Sites</h3>
             {data.sites.length === 0 ? (
-              <p className="muted">Aucun site. « Créer un site » prépare un brouillon ; la fabrication arrive avec l'atelier.</p>
+              <p className="muted">Aucun site. « Créer la maquette » lance la chaîne de l'atelier : brief, direction artistique, textes, contrôles.</p>
             ) : (
               <div className="list">
                 {data.sites.map((s) => (

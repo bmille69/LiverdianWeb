@@ -28,7 +28,7 @@ export type Company = {
   updatedAt: string;
 };
 
-export type SiteStatut = "brouillon" | "en_fabrication" | "a_valider" | "demo_en_ligne" | "livre" | "archive";
+export type SiteStatut = "brouillon" | "en_fabrication" | "a_valider" | "a_revoir" | "demo_prete" | "demo_en_ligne" | "livre" | "archive";
 export type Site = {
   id: string;
   companyId: string;
@@ -41,6 +41,43 @@ export type Site = {
   urlProd: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Liste des sites : une vignette (capture) existe. */
+  vignette?: boolean;
+};
+
+/** Atelier : fabrication d'un site par une recette (machine à états du hub). */
+export type EtatFabrication = "en_cours" | "a_valider" | "validee" | "arretee";
+export type EtatPasse = "en_file" | "en_cours" | "ok" | "echec" | "sautee" | "renvoi" | "erreur" | "arret" | "annulee";
+export type Consigne = { origine: string; texte: string };
+export type Passe = { n: number; etape: string; tour: number; etat: EtatPasse; jobId: string; creeLe: string; debut: string | null; fin: string | null; resume: string | null; sortie?: unknown };
+export type Tour = { n: number; origine: "auto" | "demande"; consignes: Consigne[]; fichier: string; debut: string; fin: string | null; resultat: "ok" | "echec" | null };
+export type Fabrication = {
+  id: string;
+  siteId: string;
+  recette: string;
+  etat: EtatFabrication;
+  etape: string | null;
+  jobId: string | null;
+  tour: number;
+  motif: string | null;
+  motifType: "controle" | "technique" | "schema" | "annulee" | null;
+  exigences: string[];
+  passes: Passe[];
+  tours: Tour[];
+  createdAt: string;
+  updatedAt: string;
+  finishedAt: string | null;
+  companyName?: string;
+  companyId?: string;
+};
+export type EtapeMeta = { id: string; label: string; detail: string; agent: string | null; groupe: "fabrication" | "controle" | "correction" };
+export type RecetteAtelier = { id: string; nom: string; sequence: string[]; correction: { etape: string; retour: string; toursMax: number }; refaire: string; seuils: Record<string, number>; etapes: EtapeMeta[] };
+export type SiteDetail = {
+  site: Site;
+  fabrication: Fabrication | null;
+  fichiers: { apercu: boolean; vignette: boolean; captures: string[]; pleinePage: string[] };
+  jobs: Job[];
+  activite: HubEvent[];
 };
 
 export type JobState = "queued" | "running" | "done" | "failed" | "cancelled";
@@ -107,6 +144,8 @@ export type Meta = {
   jours: Jour[];
   siteStatuts: { id: SiteStatut; label: string }[];
   recettes: { id: string; nom: string }[];
+  recettesAtelier: RecetteAtelier[];
+  apercuPort: number | null;
   agents: { id: string; nom: string; couleur: string; icone: string }[];
 };
 

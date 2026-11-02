@@ -16,7 +16,7 @@ const LiveContext = createContext<Live | null>(null);
 
 function topicOf(type: string): Topic | null {
   if (type.startsWith("company.")) return "companies";
-  if (type.startsWith("site.")) return "sites";
+  if (type.startsWith("site.") || type.startsWith("atelier.")) return "sites";
   if (type.startsWith("job")) return "jobs";
   if (type.startsWith("agent.")) return "agents";
   if (type.startsWith("settings.")) return "settings";

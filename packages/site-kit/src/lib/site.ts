@@ -33,9 +33,14 @@ export function ancre(s: Section): string {
   return s.type === "hero" ? "haut" : (s.ancre ?? s.type);
 }
 
+/** Photos de banque seulement : « Réalisations » promettrait des chantiers de l'entreprise, on dit « En images ». */
+const imagesDeBanque = (s: Section) =>
+  s.type === "realisations" && s.contenu.images.every((im) => site.images[im.image]?.fichier.startsWith("stock/"));
+
 export const liensMenu = site.sections
   .map((s) => {
-    const lib = s.type === "hero" ? false : s.menu === undefined ? MENU_DEFAUT[s.type] : s.menu;
+    const defaut = imagesDeBanque(s) ? "En images" : MENU_DEFAUT[s.type];
+    const lib = s.type === "hero" ? false : s.menu === undefined ? defaut : s.menu;
     return lib ? { libelle: lib, href: `/#${ancre(s)}` } : null;
   })
   .filter((x): x is { libelle: string; href: string } => x !== null);

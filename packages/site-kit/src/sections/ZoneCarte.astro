@@ -64,7 +64,7 @@ const m = motif(theme.signature, encre, 0.08);
           carte.anneaux.map((a) => (
             <g>
               <circle cx={carte.cx} cy={carte.cy} r={a.r} fill="none" stroke={doux} stroke-opacity=".35" stroke-dasharray="3 6" />
-              <text x={carte.cx + a.r * 0.707 + 4} y={carte.cy - a.r * 0.707 - 4} fill={doux} font-size="17" style="font-family:var(--f-corps)">
+              <text x={a.lx} y={a.ly} fill={doux} font-size="22" style="font-family:var(--f-corps)">
                 {a.km} km
               </text>
             </g>

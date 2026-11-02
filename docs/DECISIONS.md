@@ -131,3 +131,83 @@ redémarrer. Une route de page reçoit `index.html` ; un fichier manquant reçoi
 
 **Fichiers d'un site** : `/files/sites/<id>/…` sert les captures et l'aperçu, seulement sous le dossier du site
 (`..`, chemins absolus, lecteurs `C:`, liens symboliques sortants, `.claude` et `.env` refusés).
+
+## ADR-09 — Atelier : une machine à états déterministe, une étape = un travail (2 nov. 2026)
+
+**Contexte.** Une maquette passe par une dizaine d'étapes (brief, direction artistique, textes, assemblage, contrôles,
+relectures, corrections). Un agent « orchestrateur » résumerait et oublierait ; un plantage au milieu ne doit rien perdre.
+
+**Choix.** `apps/hub/src/atelier/moteur.ts` (classe `Atelier`) :
+- Une fabrication (table `fabrications`, migration 2) garde l'étape en cours, son travail, le tour de correction,
+  l'historique de chaque passage d'étape (`passes` : état, durée, résumé, sortie), les résultats des contrôles du passage
+  en cours (`cycle`), les tours de correction (`tours`), les renvois et les exigences du propriétaire.
+- Chaque étape est un travail `atelier.etape` de la file existante (ADR-04). L'exécutant relit l'état en base, lance
+  l'étape de la recette, rend une **issue** (`suite`, `sautee`, `controle`, `renvoi`, `arret`). La fin du travail, publiée
+  sur le bus, fait avancer la fabrication ; c'est le code qui décide de la suite, jamais un agent.
+- **Fichiers exacts** : chaque étape lit et écrit des fichiers du dossier du site (`brief.json`, `design.json`,
+  `content.json`, `site.json`, `src/data/site.json`, `.check/`, `.atelier/`). Les agents sans outils reçoivent le contenu
+  exact de ces fichiers avec leur chemin (`<fichier chemin="…">`), l'Intégrateur les lit lui-même. Aucun résumé.
+- **Rejouable** : une étape repart de ses fichiers d'entrée. Au redémarrage, la file remet en file le travail interrompu
+  et `reprendreApresDemarrage` rattrape une fin de travail non traitée.
+- Statuts de site ajoutés : `a_revoir` (arrêt) et `demo_prete` (validée ; la mise en ligne viendra en phase 3).
+- Actions humaines : **Valider**, **Demander des modifications** (texte verbatim → tour de correction → toute la chaîne
+  de contrôle ; l'exigence reste vérifiée par la revue visuelle et l'UX), **Refaire** (repart de la direction artistique,
+  le design précédent sert de contre-exemple), **Reprendre** (après une erreur technique ou une annulation).
+
+**Conséquences.** Une étape d'agent a 2 essais en cas d'erreur technique (CLI tombé, délai) ; au-delà, arrêt
+« erreur technique » reprenable. Les tests (`atelier.test.ts`) simulent agents et kit : enchaînement, blocage, 3 tours puis
+arrêt, reprise après redémarrage, modifications verbatim, refus de schéma renvoyé à l'agent.
+
+## ADR-10 — Recettes : le type de site est une donnée du moteur, pas du code du moteur
+
+**Choix.** Une recette (`atelier/recette.ts`) déclare sa séquence d'étapes, chaque étape (libellé, agent, groupe, essais,
+fonction `run`), son étape de correction et son point de retour, son point de départ de « Refaire », ses seuils.
+`recettes/index.ts` les inscrit ; le moteur et l'interface (frise, seuils affichés) les lisent sans rien savoir de leur
+contenu. Première recette : `vitrine-artisan` (1 page).
+
+`vitrine-artisan` : brief (code) → directeur artistique (structured + vision sur les photos candidates) → rédacteur
+(structured) → assemblage (code, schéma du kit) → intégration sur mesure (Claude Code, seulement si le DA la demande) →
+contrôles automatiques (`check-site`) → contrôle des faits → revue visuelle → relecture UX. Tables du hub qui alimentent
+le brief : codes NAF du bâtiment → métier du kit et prestations plausibles (`naf.ts`), communes de la métropole de Lyon,
+du Rhône et du nord de l'Isère avec coordonnées (`communes.ts`). La date de suppression de la démo (J+30) est calculée
+par le code. Sans lien Google sur la fiche, le lien de la note est une recherche Google Maps (source dite dans le brief).
+
+## ADR-11 — Boucle de correction : bloquante, 3 tours, consignes verbatim
+
+**Choix.**
+- Les contrôles d'un passage s'exécutent tous (sauf build cassé) pour rassembler toutes les consignes en un seul tour.
+- Le **code** décide du verdict à partir des données, pas le verdict de l'agent : Lighthouse mobile ≥ 95 en performance,
+  accessibilité, bonnes pratiques (médiane de 3 mesures) ; axe 0 violation grave ; aucun échec du script ; aucun fait
+  `absente`/`contradictoire`/`prestation_douteuse` ; revue visuelle sans bloquant, moyenne ≥ 4 et aucun critère < 3 ;
+  UX sans problème bloquant ni majeur.
+- Un échec ouvre un tour : le hub écrit `.atelier/corrections/tour-N.md` avec les consignes exactes, groupées par origine,
+  et le donne mot pour mot à l'Intégrateur, puis repasse toute la chaîne de contrôle. Après 3 tours automatiques encore
+  en échec : arrêt « à revoir » avec le motif (contrôles encore en échec). Jamais « validé avec remarques ».
+- **Refus de schéma** : l'assemblage (cohérence design/textes, icônes, puis schéma du kit et contrastes) attribue chaque
+  erreur à l'agent fautif d'après son chemin et la lui renvoie avec le message exact, **une fois** par cause ; un second
+  refus arrête. Le DA est aussi contrôlé dès sa sortie (photos candidates, variantes, contrastes, et **anti-gabarit du
+  thème** : couple accent/sombre différent des sites du même métier, et au moins une police, la signature ou le hero différent).
+- **Garde-fou contre la régression** : chaque version relue (`src/`, `public/`) est gardée dans `.atelier/versions/vN`
+  avec sa note (moyenne visuelle moins une demi-note par défaut bloquant, problème UX grave ou fait faux). Si un tour fait
+  baisser la note, le code remet la meilleure version et redonne à l'Intégrateur les consignes de sa propre relecture,
+  avec la relecture de la tentative ratée comme contre-exemple. Constaté en vraie fabrication : sans ce garde-fou, trois
+  tours successifs ont fait passer la note de 3,83 à 3,5 puis 3 (l'Intégrateur applique les consignes sans voir le rendu).
+- Ne partent en correction que les problèmes UX bloquants et majeurs (les mineurs diluaient les tours) ; la revue visuelle
+  transmet ses bloquants puis ses corrections.
+- La consigne de l'Intégrateur dit exactement les commandes permises : en vraie fabrication, un `cd … && ls` refusé lui avait
+  fait croire que tout le shell était interdit, et il n'avait pas lancé `npm run build`.
+- Revue visuelle et UX lisent les captures **découpées** en tranches d'écran (`decouper-captures.mjs` du kit : une page de
+  1440 × 6 600 px réduite d'un bloc est illisible) et une capture de référence du kit qui fixe le niveau attendu.
+
+## ADR-12 — Aperçu des sites sur un sous-domaine local ; permissions de l'atelier resserrées
+
+**Aperçu.** Un serveur d'aperçu séparé (`LIVERDIAN_PREVIEW_PORT`, port du hub + 1) sert le `dist/` de chaque site à la
+racine de `http://<id>.localhost:<port>/` : les chemins absolus d'Astro (`/_astro/…`) marchent sans réécriture, et la page
+du site n'a pas l'origine de l'interface (elle ne peut pas appeler l'API). Lecture seule, Host vérifié, `dist/` seulement.
+
+**Permissions de l'atelier.** `node scripts/*` est retiré des commandes permises : avec `Write(./**)`, il permettait
+d'écrire puis d'exécuter n'importe quel script. Restent `npm run build`, `npx astro build`, `npx astro check` ; le hub lance
+lui-même `check-site`. Interdits en écriture : `.claude/`, `package.json`, `astro.config.mjs`, `node_modules/`, et les
+entrées/preuves de la fabrication (`brief.json`, `design.json`, `content.json`, `.atelier/`, `.check/`). Limite connue :
+un build Astro exécute le code des composants du site, que l'Intégrateur peut modifier ; l'isolement complet demanderait un
+bac à sable système (à décider avant d'ouvrir l'atelier à des demandes extérieures).

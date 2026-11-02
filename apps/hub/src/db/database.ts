@@ -111,6 +111,53 @@ export const MIGRATIONS: string[] = [
     updated_at TEXT NOT NULL
   );
   `,
+  `
+  -- Atelier (brief C) : deux statuts de site de plus (démo prête après validation, à revoir après un arrêt).
+  -- SQLite ne modifie pas une contrainte CHECK : la table est reconstruite à l'identique, avec ses données.
+  CREATE TABLE sites_v2 (
+    id TEXT PRIMARY KEY,
+    company_id TEXT NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
+    recette TEXT NOT NULL,
+    statut TEXT NOT NULL DEFAULT 'brouillon'
+      CHECK (statut IN ('brouillon', 'en_fabrication', 'a_valider', 'a_revoir', 'demo_prete', 'demo_en_ligne', 'livre', 'archive')),
+    dossier TEXT NOT NULL,
+    qualite_note REAL,
+    url_demo TEXT,
+    url_prod TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  INSERT INTO sites_v2 SELECT id, company_id, recette, statut, dossier, qualite_note, url_demo, url_prod, created_at, updated_at FROM sites;
+  DROP TABLE sites;
+  ALTER TABLE sites_v2 RENAME TO sites;
+  CREATE INDEX sites_company ON sites (company_id);
+
+  -- Fabrication d'un site par une recette : la machine à états de l'atelier (ADR-09).
+  -- etape/job_id : étape en cours et son travail. passes : chaque passage d'étape (tour, état, durée, résumé).
+  -- cycle : résultats des contrôles du passage en cours. tours : historique des tours de correction.
+  CREATE TABLE fabrications (
+    id TEXT PRIMARY KEY,
+    site_id TEXT NOT NULL REFERENCES sites (id) ON DELETE CASCADE,
+    recette TEXT NOT NULL,
+    etat TEXT NOT NULL CHECK (etat IN ('en_cours', 'a_valider', 'validee', 'arretee')),
+    etape TEXT,
+    job_id TEXT,
+    tour INTEGER NOT NULL DEFAULT 0,
+    motif TEXT,
+    motif_type TEXT,
+    refaire INTEGER NOT NULL DEFAULT 0,
+    cycle_json TEXT NOT NULL DEFAULT '[]',
+    renvois_json TEXT NOT NULL DEFAULT '{}',
+    exigences_json TEXT NOT NULL DEFAULT '[]',
+    passes_json TEXT NOT NULL DEFAULT '[]',
+    tours_json TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    finished_at TEXT
+  );
+  CREATE INDEX fabrications_site ON fabrications (site_id, created_at);
+  CREATE INDEX fabrications_etat ON fabrications (etat, updated_at);
+  `,
 ];
 
 export function openDatabase(path: string): Db {

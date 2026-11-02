@@ -1,6 +1,6 @@
 import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance } from "fastify";
-import { createReadStream, existsSync, realpathSync, statSync } from "node:fs";
+import { createReadStream, existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { extname, join, resolve, sep } from "node:path";
 import { z } from "zod";
 import { AGENTS } from "../agents/registry.ts";
@@ -8,6 +8,7 @@ import { JOURS, SOURCED_FIELDS, SOURCES, STATUT_LABELS, STATUTS } from "../domai
 import { HubError } from "../domain/errors.ts";
 import { isSettingKey, type SettingKey } from "../domain/settings.ts";
 import { RECETTES, SITE_STATUT_LABELS, SITE_STATUTS } from "../domain/sites.ts";
+import { prerequisMaquette } from "../atelier/brief.ts";
 import { EssaiInput, type Hub } from "../hub.ts";
 import { JOB_STATES } from "../jobs/job-queue.ts";
 
@@ -15,6 +16,8 @@ z.config(z.locales.fr());
 
 export type ServerOptions = {
   port: number;
+  /** Port du serveur d'aperçu des sites (<id>.localhost:<port>). */
+  previewPort?: number;
   /** Dossier de l'interface construite (apps/web/dist) ; absent = API seule. */
   webDist?: string;
   version?: string;
@@ -109,6 +112,16 @@ export async function buildServer(hub: Hub, options: ServerOptions): Promise<Fas
         jours: JOURS,
         siteStatuts: SITE_STATUTS.map((id) => ({ id, label: SITE_STATUT_LABELS[id] })),
         recettes: RECETTES,
+        recettesAtelier: hub.atelier.recettes().map((r) => ({
+          id: r.id,
+          nom: r.nom,
+          sequence: r.sequence,
+          correction: r.correction,
+          refaire: r.refaire,
+          seuils: r.seuils,
+          etapes: Object.values(r.etapes).map((e) => ({ id: e.id, label: e.label, detail: e.detail, agent: e.agent, groupe: e.groupe })),
+        })),
+        apercuPort: options.previewPort ?? null,
         jobStates: JOB_STATES,
         agents: AGENTS.map((a) => ({ id: a.id, nom: a.nom, couleur: a.couleur, icone: a.icone })),
       }));
@@ -135,12 +148,18 @@ export async function buildServer(hub: Hub, options: ServerOptions): Promise<Fas
       });
       api.get<{ Params: { id: string } }>("/companies/:id", async (req) => ({
         company: hub.companies.get(req.params.id),
+        maquette: prerequisMaquette(hub.companies.get(req.params.id)),
         sites: hub.sites.list({ companyId: req.params.id }),
         jobs: hub.jobs.list({ subject: `company:${req.params.id}`, limit: 20 }),
         activite: hub.events.list({ subject: `company:${req.params.id}`, limit: 20 }),
       }));
       api.post("/companies", async (req, reply) => reply.code(201).send({ company: hub.companies.create(req.body) }));
       api.patch<{ Params: { id: string } }>("/companies/:id", async (req) => ({ company: hub.companies.update(req.params.id, req.body) }));
+      /** « Créer la maquette » : site neuf + fabrication par la recette (atelier). */
+      api.post<{ Params: { id: string } }>("/companies/:id/maquette", async (req, reply) => {
+        const body = z.object({ recette: z.string().max(40).optional() }).parse(req.body ?? {});
+        return reply.code(201).send(hub.atelier.lancer(req.params.id, body.recette));
+      });
       api.delete<{ Params: { id: string } }>("/companies/:id", async (req) => {
         hub.companies.delete(req.params.id);
         return { ok: true };
@@ -149,13 +168,35 @@ export async function buildServer(hub: Hub, options: ServerOptions): Promise<Fas
       // ── Sites ──
       api.get("/sites", async (req) => {
         const q = z.object({ companyId: z.string().max(40).optional(), statut: z.enum(SITE_STATUTS).optional() }).parse(req.query);
-        return { sites: hub.sites.list(q) };
+        return { sites: hub.sites.list(q).map((s) => ({ ...s, vignette: existsSync(join(s.dossier, ".atelier", "vignette.jpg")) })) };
       });
-      api.get<{ Params: { id: string } }>("/sites/:id", async (req) => ({
-        site: hub.sites.get(req.params.id),
-        jobs: hub.jobs.list({ subject: `site:${req.params.id}`, limit: 20 }),
-        activite: hub.events.list({ subject: `site:${req.params.id}`, limit: 20 }),
-      }));
+      api.get<{ Params: { id: string } }>("/sites/:id", async (req) => {
+        const site = hub.sites.get(req.params.id);
+        const revue = join(site.dossier, ".atelier", "revue");
+        return {
+          site,
+          fabrication: hub.atelier.pourSite(site.id),
+          fichiers: {
+            apercu: existsSync(join(site.dossier, "dist", "index.html")),
+            vignette: existsSync(join(site.dossier, ".atelier", "vignette.jpg")),
+            captures: existsSync(revue) ? readdirSync(revue).filter((f) => f.endsWith(".png") && !f.startsWith("zz-")).sort() : [],
+            pleinePage: ["capture-375.png", "capture-768.png", "capture-1440.png"].filter((f) => existsSync(join(site.dossier, ".check", f))),
+          },
+          jobs: hub.jobs.list({ subject: `site:${req.params.id}`, limit: 60 }),
+          activite: hub.events.list({ subject: `site:${req.params.id}`, limit: 40 }),
+        };
+      });
+      api.get("/fabrications", async (req) => {
+        const q = z.object({ etat: z.enum(["en_cours", "a_valider", "validee", "arretee"]).optional() }).parse(req.query);
+        return { fabrications: hub.atelier.list(q).map(({ passes, ...f }) => ({ ...f, passes: passes.map(({ sortie: _s, ...x }) => x) })) };
+      });
+      api.post<{ Params: { id: string } }>("/sites/:id/valider", async (req) => ({ fabrication: hub.atelier.valider(req.params.id) }));
+      api.post<{ Params: { id: string } }>("/sites/:id/modifications", async (req) => {
+        const body = z.object({ texte: z.string().trim().min(5, "Décrivez la modification demandée").max(4000) }).parse(req.body);
+        return { fabrication: hub.atelier.modifier(req.params.id, body.texte) };
+      });
+      api.post<{ Params: { id: string } }>("/sites/:id/refaire", async (req) => ({ fabrication: hub.atelier.refaire(req.params.id) }));
+      api.post<{ Params: { id: string } }>("/sites/:id/reprendre", async (req) => ({ fabrication: hub.atelier.reprendre(req.params.id) }));
       api.post("/sites", async (req, reply) => reply.code(201).send({ site: hub.sites.create(req.body) }));
       api.patch<{ Params: { id: string } }>("/sites/:id", async (req) => ({ site: hub.sites.update(req.params.id, req.body) }));
 
@@ -265,5 +306,50 @@ export async function buildServer(hub: Hub, options: ServerOptions): Promise<Fas
   } else {
     app.setNotFoundHandler((_req, reply) => reply.code(404).send({ error: "Introuvable (interface non construite : lancez « npm run build »)" }));
   }
+  return app;
+}
+
+/**
+ * Serveur d'aperçu des sites construits : chaque site est servi à la racine de son propre sous-domaine local
+ * (`http://<id>.localhost:<port>/`), ainsi ses chemins absolus (/_astro/…, /mentions-legales/) marchent tels quels,
+ * et une page de site ne partage pas l'origine de l'interface (elle ne peut pas appeler l'API du hub).
+ * Lecture seule, `dist/` du site uniquement.
+ */
+export async function buildPreviewServer(hub: Hub, options: { port: number }): Promise<FastifyInstance> {
+  const app = Fastify({ logger: false });
+  const hostRe = new RegExp(`^([a-z0-9-]{1,40})\\.localhost:${options.port}$`);
+  app.addHook("onRequest", async (req, reply) => {
+    if (req.method !== "GET" && req.method !== "HEAD") return reply.code(405).send("Lecture seule");
+    if (!hostRe.test((req.headers.host ?? "").toLowerCase())) return reply.code(403).send("Hôte non autorisé");
+  });
+  app.get("/*", async (req, reply) => {
+    const id = hostRe.exec((req.headers.host ?? "").toLowerCase())![1]!;
+    let dossier: string;
+    try {
+      dossier = hub.sites.get(id).dossier;
+    } catch {
+      return reply.code(404).type("text/plain; charset=utf-8").send("Site inconnu");
+    }
+    const dist = join(dossier, "dist");
+    let chemin: string;
+    try {
+      chemin = decodeURIComponent((req.url.split("?")[0] ?? "/").replace(/^\/+/, ""));
+    } catch {
+      return reply.code(400).send("Chemin invalide");
+    }
+    const file = safeJoin(dist, chemin || "index.html");
+    if (!file) return reply.code(403).send("Chemin refusé");
+    let target = file;
+    if (existsSync(target) && statSync(target).isDirectory()) target = join(target, "index.html");
+    if (!existsSync(target) || !statSync(target).isFile()) {
+      const page404 = join(dist, "404.html");
+      if (existsSync(page404)) return reply.code(404).type(MIME[".html"]!).send(createReadStream(page404));
+      return reply.code(404).type("text/plain; charset=utf-8").send(existsSync(dist) ? "Page introuvable" : "Ce site n'est pas encore construit");
+    }
+    reply.header("content-type", MIME[extname(target).toLowerCase()] ?? "application/octet-stream");
+    reply.header("x-content-type-options", "nosniff");
+    reply.header("cache-control", "no-store");
+    return reply.send(createReadStream(target));
+  });
   return app;
 }

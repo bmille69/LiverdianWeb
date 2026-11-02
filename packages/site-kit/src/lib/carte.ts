@@ -6,7 +6,7 @@
 import type { Zone } from "../schema.ts";
 
 export type PointCarte = { nom: string; x: number; y: number; siege: boolean; lx: number; ly: number; ancre: "start" | "end" | "middle" };
-export type Carte = { largeur: number; hauteur: number; cx: number; cy: number; points: PointCarte[]; anneaux: { r: number; km: number }[] };
+export type Carte = { largeur: number; hauteur: number; cx: number; cy: number; points: PointCarte[]; anneaux: { r: number; km: number; lx: number; ly: number }[] };
 
 const L = 720;
 const H = 520;
@@ -85,7 +85,24 @@ export function carteZone(zone: Zone): Carte {
 
   // Anneaux de distance « ronds » (2, 5, 10, 15, 20 km…) jusqu'à la portée.
   const pas = portee <= 3 ? 1 : portee <= 6 ? 2 : portee <= 20 ? 5 : 10;
-  const anneaux: { r: number; km: number }[] = [];
-  for (let d = pas; d <= portee * 1.15; d += pas) anneaux.push({ km: d, r: d * echelle });
+  const anneaux: { r: number; km: number; lx: number; ly: number }[] = [];
+  // Étiquette de chaque anneau : l'angle le plus éloigné des points et des étiquettes des communes (jamais superposée).
+  const obstacles = points.flatMap((p) => [
+    { x: p.x, y: p.y },
+    { x: p.lx + (p.ancre === "end" ? -1 : p.ancre === "middle" ? 0 : 1) * p.nom.length * TAILLE_TEXTE * 0.28, y: p.ly - TAILLE_TEXTE * 0.35 },
+  ]);
+  for (let d = pas; d <= portee * 1.15; d += pas) {
+    const r = d * echelle;
+    let mieux = { lx: cx + r * 0.707 + 4, ly: cy - r * 0.707 - 4, dist: -1 };
+    for (let deg = -170; deg <= 170; deg += 10) {
+      const a = (deg * Math.PI) / 180;
+      const lx = cx + Math.cos(a) * r + 4;
+      const ly = cy + Math.sin(a) * r - 4;
+      if (lx < 8 || lx > L - 60 || ly < 22 || ly > H - 8) continue;
+      const dist = Math.min(...obstacles.map((o) => Math.hypot((o.x - (lx + 24)) * 0.6, o.y - (ly - 6))));
+      if (dist > mieux.dist) mieux = { lx, ly, dist };
+    }
+    anneaux.push({ km: d, r, lx: mieux.lx, ly: mieux.ly });
+  }
   return { largeur: L, hauteur: H, cx, cy, points, anneaux };
 }

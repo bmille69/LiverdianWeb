@@ -9,6 +9,7 @@ Entrée : captures pleine page à 375, 768 et 1440 px (+ capture de l'écran ini
 
 ## Défauts bloquants (un seul = échec)
 - Texte coupé, débordant, superposé, illisible sur son fond ; élément qui sort de l'écran (défilement horizontal).
+  Regarder de près les capitales accentuées (É, À) du logo et des titres : un accent rogné (« Ėlec ») est un texte coupé.
 - Zone vide anormale, image cassée ou absente, placeholder visible (lorem, `[À COMPLÉTER]` sur une démo, `undefined`).
 - Sur mobile : le téléphone ou le bouton « Appeler » n'est pas visible dans l'écran initial.
 - Bandeau « maquette » absent sur une démo.

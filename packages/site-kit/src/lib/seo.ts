@@ -49,7 +49,8 @@ export function jsonLd(): Record<string, unknown> {
   if (site.seo.url) d.url = site.seo.url + "/";
   if (e.email) d.email = e.email;
   if (e.siret) d.identifier = { "@type": "PropertyValue", propertyID: "SIRET", value: e.siret.replace(/\s/g, "") };
-  if (e.dateCreation) d.foundingDate = e.dateCreation;
+  // Année seule : le site n'affiche jamais le jour ni le mois de création (règle des faits).
+  if (e.dateCreation) d.foundingDate = e.dateCreation.slice(0, 4);
   if (site.zone.commune.lat !== undefined && site.zone.commune.lon !== undefined) {
     d.geo = { "@type": "GeoCoordinates", latitude: site.zone.commune.lat, longitude: site.zone.commune.lon };
   }

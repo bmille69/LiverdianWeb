@@ -1,10 +1,14 @@
 import { mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { z } from "zod";
 import { AgentService } from "./agents/agent-service.ts";
 import { ClaudeCli, type Spawner } from "./agents/claude-cli.ts";
 import { DeepSeekClient, type FetchLike } from "./agents/deepseek.ts";
 import { getAgent } from "./agents/registry.ts";
+import { SiteKit, type KitRunner } from "./atelier/kit.ts";
+import { Atelier } from "./atelier/moteur.ts";
+import type { Recette } from "./atelier/recette.ts";
+import { RECETTES_ATELIER } from "./atelier/recettes/index.ts";
 import { SkillLibrary } from "./agents/skills.ts";
 import { openDatabase, type Db } from "./db/database.ts";
 import { CompanyService } from "./domain/companies.ts";
@@ -22,6 +26,13 @@ export type HubOptions = {
   claudeBinary?: string;
   spawner?: Spawner;
   fetch?: FetchLike;
+  /** Kit de sites (défaut : packages/site-kit à côté de skills/). */
+  kitDir?: string;
+  /** Tests : kit simulé (génération, contrôles), agents simulés, recettes de test, horloge. */
+  kit?: KitRunner;
+  atelierAgents?: ConstructorParameters<typeof Atelier>[0]["agents"];
+  recettes?: Recette[];
+  now?: () => Date;
 };
 
 export type Hub = ReturnType<typeof createHub>;
@@ -50,6 +61,20 @@ export function createHub(opts: HubOptions) {
   const deepseek = new DeepSeekClient({ apiKey: () => settings.secret("DEEPSEEK_API_KEY"), fetch: opts.fetch });
   const agents = new AgentService({ db, cli, deepseek, skills, settings, events, runsDir: join(opts.dataDir, "runs") });
   const jobs = new JobQueue(db, bus, events, () => settings.get("jobs.parallel"));
+  const kit = opts.kit ?? new SiteKit(opts.kitDir ?? join(dirname(opts.skillsDir), "packages", "site-kit"));
+  const atelier = new Atelier({
+    db,
+    bus,
+    events,
+    jobs,
+    sites,
+    companies,
+    recettes: opts.recettes ?? RECETTES_ATELIER,
+    agents: opts.atelierAgents ?? agents,
+    kit,
+    sitesDir: join(opts.dataDir, "sites"),
+    now: opts.now,
+  });
 
   // Essai d'un agent : une question, une réponse structurée. Prouve le câblage depuis l'interface (Équipe).
   jobs.register("agent.essai", {
@@ -86,8 +111,17 @@ export function createHub(opts: HubOptions) {
     deepseek,
     agents,
     jobs,
+    kit,
+    atelier,
     dataDir: opts.dataDir,
+    /** Démarre la file puis rattrape les fabrications interrompues (ordre important). */
+    start() {
+      const r = jobs.start();
+      const fabrications = atelier.reprendreApresDemarrage();
+      return { ...r, fabrications };
+    },
     async close() {
+      atelier.close();
       await jobs.stop();
       db.close();
     },

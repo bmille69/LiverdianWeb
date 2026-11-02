@@ -1,6 +1,6 @@
 /**
  * Captures de l'interface avec Microsoft Edge (playwright-core, canal msedge), pour relecture visuelle.
- *   LIVERDIAN_PORT=4399 npm run captures -- [--seed] [--essai]
+ *   LIVERDIAN_PORT=4399 npm run captures -- [--seed] [--essai] [--site <id>]
  * Le hub doit tourner (de préférence sur un dossier de données temporaire). --seed ajoute des fiches de démonstration,
  * --essai lance un vrai essai d'agent (haiku) pour montrer un travail en cours. Images dans .data/captures/.
  */
@@ -62,7 +62,7 @@ if (process.argv.includes("--essai")) {
 }
 
 const browser = await chromium.launch({ channel: "msedge", headless: true });
-async function shoot(name: string, path: string, opts: { theme?: "dark" | "light"; width?: number; height?: number; before?: (p: Page) => Promise<void> } = {}) {
+async function shoot(name: string, path: string, opts: { theme?: "dark" | "light"; width?: number; height?: number; fullPage?: boolean; before?: (p: Page) => Promise<void> } = {}) {
   const context = await browser.newContext({ viewport: { width: opts.width ?? 1440, height: opts.height ?? 900 }, deviceScaleFactor: 1, colorScheme: opts.theme ?? "dark" });
   await context.addInitScript((theme) => {
     localStorage.setItem("liverdian:theme", theme);
@@ -76,7 +76,7 @@ async function shoot(name: string, path: string, opts: { theme?: "dark" | "light
   await page.waitForTimeout(250);
   if (opts.before) await opts.before(page);
   await page.waitForTimeout(250);
-  await page.screenshot({ path: join(out, `${name}.png`) });
+  await page.screenshot({ path: join(out, `${name}.png`), fullPage: opts.fullPage ?? false });
   if (errors.length) console.log(`  ${name} : erreurs console →`, errors);
   await context.close();
   console.log(`  ${name}.png`);
@@ -117,6 +117,41 @@ try {
   await shoot("15-clair-entreprises", "/entreprises", { theme: "light" });
   if (martin) await shoot("16-clair-detail", `/entreprises/${martin.id}`, { theme: "light" });
   await shoot("17-mobile", "/entreprises", { width: 390, height: 844 });
+  // Écran d'un site fabriqué par l'atelier (--site <id>) : page entière, aperçu plein écran, fiche avec « Créer la maquette ».
+  const i = process.argv.indexOf("--site");
+  const siteId = i > 0 ? process.argv[i + 1] : undefined;
+  if (siteId) {
+    const attendreApercu = async (p: Page) => {
+      await p.waitForTimeout(2500);
+    };
+    await shoot("20-site-atelier", `/sites/${siteId}`, { width: 1600, height: 1000, before: attendreApercu });
+    // La page défile dans .main : une fenêtre très haute montre tout l'écran du site.
+    await shoot("21-site-atelier-page", `/sites/${siteId}`, { width: 1600, height: 3600, before: attendreApercu });
+    await shoot("22-site-apercu-plein-ecran", `/sites/${siteId}`, {
+      width: 1600,
+      height: 1000,
+      before: async (p) => {
+        await attendreApercu(p);
+        await p.getByRole("button", { name: "Plein écran" }).click();
+        await p.waitForTimeout(2500);
+      },
+    });
+    await shoot("23-site-apercu-mobile", `/sites/${siteId}`, {
+      width: 1600,
+      height: 1000,
+      before: async (p) => {
+        await p.getByRole("button", { name: "Plein écran" }).click();
+        await p.getByRole("radio", { name: "Mobile" }).click();
+        await p.waitForTimeout(2500);
+      },
+    });
+    await shoot("24-site-clair", `/sites/${siteId}`, { width: 1600, height: 1000, theme: "light", before: attendreApercu });
+    const site = (await call("GET", `/api/sites/${siteId}`)).site as { companyId: string };
+    await shoot("25-fiche-maquette", `/entreprises/${site.companyId}`);
+    await shoot("26-atelier-fabrications", "/atelier");
+    await shoot("27-sites-vignettes", "/sites");
+    await shoot("28-aujourdhui", "/");
+  }
 } finally {
   await browser.close();
 }

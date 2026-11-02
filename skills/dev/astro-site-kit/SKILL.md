@@ -43,6 +43,9 @@ Référence exacte : `packages/site-kit/src/schema.ts` (zod, messages français)
 - `node scripts/check-site.mjs <site> [--sans-build] [--runs n]` : build + Lighthouse mobile + axe + captures 375/768/1440
   + écran initial → `<site>/.check/check-report.json` (`ok`, `echecs[]`, scores) et PNG. Code 0/1/2. Voir README du kit.
 - Le build échoue (code 1, liste française) si site.json est invalide ou si un contraste du thème est < AA.
+- Dans l'atelier du hub, l'Intégrateur ne lance que `npm run build` (et `npx astro check`) : c'est le hub qui lance
+  check-site après chaque passage et transmet ses échecs. `package.json`, `astro.config.mjs`, `brief.json`, `design.json`,
+  `content.json`, `.atelier/` et `.check/` ne se modifient pas. Toutes les photos candidates du site sont dans `stock/`.
 
 ### site.json (racine)
 `version: 1` · `slug` · `entreprise` · `zone` · `theme` · `images` · `entete` · `sections[]` · `pied` · `seo` · `formulaire` · `demo` · `legal`

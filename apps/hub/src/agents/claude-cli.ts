@@ -22,8 +22,28 @@ export type ClaudeMode = "chat" | "vision" | "atelier";
 /** Outils de l'atelier. Bash n'y est utilisable que pour les commandes de ATELIER_COMMANDS. */
 export const ATELIER_TOOLS = ["Read", "Edit", "Write", "Glob", "Grep", "Bash", "Skill"] as const;
 
-/** Commandes permises à l'atelier : liste fermée, sans joker qui ouvrirait le terminal. */
-export const ATELIER_COMMANDS = ["npm run build", "npx astro build", "npx astro check", "node scripts/*"] as const;
+/**
+ * Commandes permises à l'atelier : liste fermée, sans joker. L'ancien `node scripts/*` est retiré : combiné à
+ * Write(./**), il permettait d'écrire un script puis de l'exécuter (node à tout faire). Les contrôles (check-site)
+ * sont lancés par le hub lui-même, pas par l'agent.
+ */
+export const ATELIER_COMMANDS = ["npm run build", "npx astro build", "npx astro check"] as const;
+
+/**
+ * Fichiers que l'atelier ne modifie jamais : ses propres permissions, ce qui s'exécute au build en dehors des
+ * sources du site (package.json, configuration Astro, node_modules), et les entrées/preuves de la fabrication.
+ */
+export const ATELIER_PROTEGES = [
+  "./.claude/**",
+  "./package.json",
+  "./astro.config.mjs",
+  "./node_modules/**",
+  "./brief.json",
+  "./design.json",
+  "./content.json",
+  "./.atelier/**",
+  "./.check/**",
+] as const;
 
 /** Options interdites en toutes circonstances : jamais de contournement des permissions. */
 const FORBIDDEN_ARGS = [
@@ -91,7 +111,7 @@ export function buildChatArgs(opts: { model: string; systemPromptFile: string; j
  */
 export function buildAtelierArgs(opts: { model: string; appendSystemPromptFile: string; maxTurns: number; jsonSchema?: object }): string[] {
   const allowed = ["Skill", "Read(./**)", "Glob", "Grep", "Edit(./**)", "Write(./**)", ...ATELIER_COMMANDS.map((c) => `Bash(${c})`)];
-  const denied = ["Edit(./.claude/**)", "Write(./.claude/**)", "Read(./.env*)"];
+  const denied = [...ATELIER_PROTEGES.flatMap((f) => [`Edit(${f})`, `Write(${f})`]), "Read(./.env*)"];
   const args = [
     "-p",
     // Seuls les réglages du projet (le dossier du site) : ni ceux de l'utilisateur, ni les serveurs MCP installés.

@@ -16,6 +16,7 @@ packages/site-kit/
   examples/<nom>/        3 sites d'exemple (site.json + captures/)
   scripts/new-site.mjs   générateur d'un site client
   scripts/check-site.mjs contrôle automatique (build, Lighthouse, axe, captures)
+  scripts/decouper-captures.mjs  captures découpées en tranches d'écran (relecture par vision) + vignette
 ```
 
 ## Installation (une fois)
@@ -85,6 +86,13 @@ Dernière ligne de stdout : `{ "ok": bool, "rapport": "<chemin>", "echecs": ["�
   "echecs": ["id : détail", …]       // contrôles bloquants ratés
 }
 ```
+
+Le hub (atelier) lance ensuite `node scripts/decouper-captures.mjs <site>/.check <site>/.atelier/revue` : chaque
+capture pleine page est découpée en tranches de la hauteur d'un écran, dans l'ordre de la page, et une vignette
+`<site>/.atelier/vignette.jpg` (haut de la page bureau) sert à la liste des sites.
+
+`entreprise.siren` et `entreprise.naf` sont facultatifs (fiche saisie à la main) ; sans SIREN, les mentions légales
+d'une démo affichent « non communiqué (maquette) ». Sans horaires, le pied de page n'en invente pas : il donne le téléphone.
 
 Contrôles (`controles[].id`) : `build-sans-avertissement` (non bloquant), `texte-interdit <page>`
 (`[À COMPLÉTER`, `undefined`, `lorem`, `NaN`), `h1-unique <page>`, `lang-fr <page>`, `liens-internes`,

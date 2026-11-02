@@ -21,7 +21,7 @@ const sombre = site.pied.variante === "complet" && fonds[fonds.length - 1] !== "
   site.pied.variante === "complet" ? (
     <footer class:list={[sombre ? "fond-sombre sur-sombre" : "fond-teinte border-t border-trait", "pt-16 pb-8 md:pt-20"]}>
       <div class="conteneur">
-        <div class="grid gap-12 md:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr] lg:gap-10">
+        <div class:list={["grid gap-12 md:grid-cols-2 lg:gap-10", horaires.length || e.horairesNote ? "lg:grid-cols-[1.4fr_1fr_1fr_1fr]" : "lg:grid-cols-[1.4fr_1fr_1fr]"]}>
           <div class="max-w-sm">
             <Logo clair={sombre} />
             {site.pied.phrase && <p class="texte-doux mt-5 text-[0.9375rem]">{site.pied.phrase}</p>}
@@ -37,22 +37,23 @@ const sombre = site.pied.variante === "complet" && fonds[fonds.length - 1] !== "
               {e.email && <p><a href={`mailto:${e.email}`} class="inline-flex min-h-11 items-center break-all underline-offset-4 hover:underline">{e.email}</a></p>}
             </address>
           </div>
-          <div>
-            <h2 class="font-corps text-sm font-semibold uppercase tracking-[0.12em] texte-accent">Horaires</h2>
-            {horaires.length ? (
-              <dl class="mt-4 space-y-3 text-[0.9375rem]">
-                {horaires.map((h) => (
-                  <div>
-                    <dt class="font-medium">{h.jours}</dt>
-                    <dd class="texte-doux">{h.heures}</dd>
-                  </div>
-                ))}
-              </dl>
-            ) : (
-              <p class="texte-doux mt-4 text-[0.9375rem]">Sur rendez-vous, par téléphone.</p>
-            )}
-            {e.horairesNote && <p class="texte-doux mt-3 text-sm">{e.horairesNote}</p>}
-          </div>
+          {/* Sans horaires dans les sources, la colonne disparaît : rien d'inventé, pas de doublon avec « Coordonnées ». */}
+          {(horaires.length > 0 || e.horairesNote) && (
+            <div>
+              <h2 class="font-corps text-sm font-semibold uppercase tracking-[0.12em] texte-accent">Horaires</h2>
+              {horaires.length > 0 && (
+                <dl class="mt-4 space-y-3 text-[0.9375rem]">
+                  {horaires.map((h) => (
+                    <div>
+                      <dt class="font-medium">{h.jours}</dt>
+                      <dd class="texte-doux">{h.heures}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              {e.horairesNote && <p class="texte-doux mt-3 text-sm">{e.horairesNote}</p>}
+            </div>
+          )}
           <div>
             <h2 class="font-corps text-sm font-semibold uppercase tracking-[0.12em] texte-accent">Zone d’intervention</h2>
             <p class="texte-doux mt-4 text-[0.9375rem] leading-relaxed">{communes.join(" · ")}</p>
@@ -63,7 +64,7 @@ const sombre = site.pied.variante === "complet" && fonds[fonds.length - 1] !== "
         </div>
         <div class:list={["mt-14 flex flex-col gap-4 border-t pt-6 text-sm md:flex-row md:items-center md:justify-between", sombre ? "border-white/12" : "border-trait"]}>
           <p class="texte-doux">
-            © {annee} {e.raisonSociale} · SIREN {sirenFr(e.siren)}
+            © {annee} {e.raisonSociale}{e.siren && ` · SIREN ${sirenFr(e.siren)}`}
           </p>
           <ul class="flex flex-wrap gap-x-6 gap-y-1">
             <li><a href="/mentions-legales/" class="texte-doux inline-flex min-h-11 items-center underline-offset-4 hover:underline">Mentions légales</a></li>
@@ -95,7 +96,7 @@ const sombre = site.pied.variante === "complet" && fonds[fonds.length - 1] !== "
             <li><a href="/mentions-legales/" class="texte-doux inline-flex min-h-11 items-center underline-offset-4 hover:underline">Mentions légales</a></li>
             <li><a href="/confidentialite/" class="texte-doux inline-flex min-h-11 items-center underline-offset-4 hover:underline">Confidentialité</a></li>
           </ul>
-          <p class="texte-doux">© {annee} {e.raisonSociale} · SIREN {sirenFr(e.siren)} · Site réalisé par {site.demo.agence}</p>
+          <p class="texte-doux">© {annee} {e.raisonSociale}{e.siren && ` · SIREN ${sirenFr(e.siren)}`} · Site réalisé par {site.demo.agence}</p>
         </div>
       </div>
     </footer>

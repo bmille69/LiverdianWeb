@@ -52,8 +52,9 @@ export const entrepriseSchema = z.object({
   metier,
   /** Libellé du métier tel qu'il apparaît dans les titres (« Électricien », « Couvreur-zingueur »). */
   metierLibelle: texteCourt(40),
-  naf: z.string().regex(/^\d{2}\.\d{2}[A-Z]$/, "code NAF attendu au format 43.21A"),
-  siren: z.string().regex(/^\d{3} ?\d{3} ?\d{3}$/, "SIREN : 9 chiffres"),
+  /** Facultatifs : une fiche saisie à la main peut ne pas les avoir (jamais inventés). */
+  naf: z.string().regex(/^\d{2}\.\d{2}[A-Z]$/, "code NAF attendu au format 43.21A").optional(),
+  siren: z.string().regex(/^\d{3} ?\d{3} ?\d{3}$/, "SIREN : 9 chiffres").optional(),
   siret: z.string().regex(/^\d{3} ?\d{3} ?\d{3} ?\d{5}$/, "SIRET : 14 chiffres").optional(),
   formeJuridique: texteCourt(80).optional(),
   capital: texteCourt(40).optional(),

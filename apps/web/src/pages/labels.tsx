@@ -15,6 +15,8 @@ export const SITE_STATUT: Record<SiteStatut, { label: string; tone: string }> = 
   brouillon: { label: "Brouillon", tone: "neutral" },
   en_fabrication: { label: "En fabrication", tone: "blue" },
   a_valider: { label: "À valider", tone: "amber" },
+  a_revoir: { label: "À revoir", tone: "red" },
+  demo_prete: { label: "Démo prête", tone: "green" },
   demo_en_ligne: { label: "Démo en ligne", tone: "violet" },
   livre: { label: "Livré", tone: "green" },
   archive: { label: "Archivé", tone: "muted" },

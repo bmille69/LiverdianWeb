@@ -7,18 +7,20 @@ import type { CompanyService } from "./companies.ts";
 import { notFound } from "./errors.ts";
 import type { EventLog } from "./events.ts";
 
-export const SITE_STATUTS = ["brouillon", "en_fabrication", "a_valider", "demo_en_ligne", "livre", "archive"] as const;
+export const SITE_STATUTS = ["brouillon", "en_fabrication", "a_valider", "a_revoir", "demo_prete", "demo_en_ligne", "livre", "archive"] as const;
 export type SiteStatut = (typeof SITE_STATUTS)[number];
 export const SITE_STATUT_LABELS: Record<SiteStatut, string> = {
   brouillon: "Brouillon",
   en_fabrication: "En fabrication",
   a_valider: "À valider",
+  a_revoir: "À revoir",
+  demo_prete: "Démo prête",
   demo_en_ligne: "Démo en ligne",
   livre: "Livré",
   archive: "Archivé",
 };
 
-/** Recettes connues (VISION §2.2) : un type de site = une recette. La chaîne de fabrication arrive au brief suivant. */
+/** Recettes connues (VISION §2.2) : un type de site = une recette. Seules celles de `atelier/recettes` ont une chaîne de fabrication. */
 export const RECETTES = [
   { id: "vitrine-artisan", nom: "Vitrine artisan 1 page" },
   { id: "vitrine-pro", nom: "Vitrine Pro 5 pages" },

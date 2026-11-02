@@ -3,7 +3,7 @@
   "shared": ["_shared/regles-maison"],
   "agents": {
     "directeur": [],
-    "directeur-artistique": ["design/web-design-pro", "design/design-par-metier", "design/composition-vitrine-locale"],
+    "directeur-artistique": ["design/web-design-pro", "design/design-par-metier", "design/composition-vitrine-locale", "dev/astro-site-kit"],
     "redacteur": ["copy/copywriting-artisan-local", "copy/seo-local", "copy/mentions-legales-fr"],
     "integrateur": ["dev/astro-site-kit", "dev/performance-accessibilite", "design/web-design-pro", "copy/seo-local", "copy/mentions-legales-fr"],
     "controleur-qa": ["qa/controle-faits", "qa/revue-visuelle", "dev/performance-accessibilite"],
