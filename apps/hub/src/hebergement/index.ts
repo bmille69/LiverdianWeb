@@ -18,6 +18,7 @@ import type { JobContext, JobQueue } from "../jobs/job-queue.ts";
 import { Cloudflare, CloudflareError, type FetchLike } from "./cloudflare.ts";
 import { Wrangler, ecrireConfig, runProcess, wranglerDuDepot } from "./deploy.ts";
 import { SLUGS_RESERVES, slugifier, slugUnique } from "./slug.ts";
+import { getSansCacheDns } from "./verif-dns.ts";
 import type { Spawner } from "../agents/claude-cli.ts";
 
 /** Limites publiées des Static Assets de Cloudflare : refus avant de les dépasser, message clair. */
@@ -95,6 +96,7 @@ export class Hebergement {
   readonly #jobs: JobQueue;
   readonly #dataDir: string;
   readonly #fetch: FetchLike;
+  readonly #fetchInjecte: boolean;
   readonly #spawner?: Spawner;
   readonly #now: () => Date;
   #minuteurReleve: ReturnType<typeof setInterval> | null = null;
@@ -108,6 +110,7 @@ export class Hebergement {
     this.#jobs = deps.jobs;
     this.#dataDir = deps.dataDir;
     this.#fetch = deps.options?.fetch ?? ((input, init) => fetch(input, init));
+    this.#fetchInjecte = deps.options?.fetch !== undefined;
     this.#spawner = deps.options?.spawner;
     this.#now = deps.options?.now ?? (() => new Date());
 
@@ -518,10 +521,13 @@ export class Hebergement {
   async #verifierEnLigne(url: string, signal?: AbortSignal): Promise<void> {
     for (let essai = 1; essai <= 6; essai++) {
       try {
-        const res = await this.#fetch(url, { signal: AbortSignal.timeout(10_000) });
-        const texte = await res.text();
-        if (res.status === 200 && texte.includes("data-bandeau-demo")) return;
-        if (res.status === 410) throw new HubError(`La démo répond « expirée » : la fiche KV contredit l'état local. Réessayez dans une minute.`, 502);
+        // En vrai : résolution par DNS publics (la box peut garder « n'existe pas » en cache 30 min).
+        // En test : le fetch injecté.
+        const { status, texte } = this.#fetchInjecte
+          ? await this.#fetch(url, { signal: AbortSignal.timeout(10_000) }).then(async (r) => ({ status: r.status, texte: await r.text() }))
+          : await getSansCacheDns(url);
+        if (status === 200 && texte.includes("data-bandeau-demo")) return;
+        if (status === 410) throw new HubError(`La démo répond « expirée » : la fiche KV contredit l'état local. Réessayez dans une minute.`, 502);
       } catch (err) {
         if (err instanceof HubError && err.status !== 409) throw err;
         /* réseau ou pas encore propagé : on retente */
