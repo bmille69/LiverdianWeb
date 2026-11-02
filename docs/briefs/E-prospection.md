@@ -11,7 +11,8 @@ règles légales), `docs/DECISIONS.md`, le skill `skills/prospection/audit-site-
 complète), relis le fichier juste avant de l'éditer, et ajoute ta migration À LA FIN de la liste au moment de l'écrire.
 **Pour tes essais, lance ton hub sur des ports et des données à toi** : `LIVERDIAN_DATA_DIR` dans un dossier temporaire,
 `LIVERDIAN_PORT=4330`, et un port d'aperçu différent de 4321 (ajoute une variable d'environnement si ce port est figé).
-L'autre session utilise `.data` et les ports 4320/4321. Aucune régression : tous les tests restent verts.
+Le propriétaire a son hub ouvert sur `.data` (4320/4321) et l'autre session utilise 4340/4341 : ne touche à aucun
+d'eux, n'arrête aucun processus. Aucune régression : tous les tests restent verts.
 
 ## Objectif
 Le propriétaire définit des critères (métiers, zone, présence/qualité du site, ancienneté, avis…), lance une recherche,

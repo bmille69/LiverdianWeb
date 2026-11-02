@@ -12,6 +12,12 @@ moment de l'écrire (l'autre session en ajoute une aussi). Aucune régression : 
 ## Demande du propriétaire (verbatim)
 « Il ne faut pas générer 2 fois le même site pour les clients, il faut que chacun soit unique. »
 
+**Le propriétaire a son propre hub ouvert sur `.data` (ports 4320/4321) : ne le touche pas, n'arrête aucun processus,
+ne lance jamais un second hub sur `.data`.** Pour tes essais, copie `.data/liverdian.db` et `.data/sites` dans un dossier
+temporaire et lance ton hub avec `LIVERDIAN_DATA_DIR` = ce dossier, `LIVERDIAN_PORT=4340` et un port d'aperçu 4341
+(ajoute une variable d'environnement si ce port est figé — l'autre session peut l'avoir déjà fait, vérifie). Le rattrapage
+du registre doit s'exécuter tout seul au démarrage du hub, pour que la vraie base soit remplie au prochain `npm start`.
+
 ## À livrer
 1. **Diversité du kit** (sans baisser la qualité — mêmes exigences Lighthouse/axe/vision que le brief B) :
    - au moins 4 variantes réellement différentes par famille de section principale (hero, services, preuve/pourquoi,
