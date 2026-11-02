@@ -301,10 +301,10 @@ export class Hebergement {
         const r = await client.routeWorker(zoneId, `*.demo.${domaine}/*`);
         ajoute(r.present
           ? { ok: true, niveau: "ok", titre: "Route du Worker", detail: "La route « *.demo.<domaine>/* » vers le Worker existe déjà." }
-          : { ok: true, niveau: "avertissement", titre: "Route du Worker", detail: "La route sera créée à la première publication (permission Account › Workers Routes › Edit nécessaire)." });
+          : { ok: true, niveau: "avertissement", titre: "Route du Worker", detail: "La route sera créée à la première publication (permission Zone › Workers Routes › Edit nécessaire)." });
       } catch (err) {
         const e = err as CloudflareError;
-        ajoute({ ok: false, niveau: "erreur", titre: "Route du Worker", detail: `Impossible de consulter les routes (${e.message}) : il faut la permission Account › Workers Routes › Edit.` });
+        ajoute({ ok: false, niveau: "erreur", titre: "Route du Worker", detail: `Impossible de consulter les routes (${e.message}) : il faut la permission Zone › Workers Routes › Edit.` });
       }
     }
 

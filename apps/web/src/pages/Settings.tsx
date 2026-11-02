@@ -236,7 +236,7 @@ function HebergementDemos() {
       </SecretCloudflare>
       <SecretCloudflare nom="CLOUDFLARE_API_TOKEN" libelle="Jeton Cloudflare" present={heb.data?.jetonPresent} onSaved={heb.reload}>
         Jeton d'API à créer sur dash.cloudflare.com (« Mon profil › Jetons API › Créer un jeton › Personnalisé ») avec les permissions : Zone › DNS › Edit, Zone › Zone › Read,
-        Compte › Workers Routes › Edit, Compte › Workers KV Storage › Edit, Compte › Workers Scripts › Edit. Le test ci-dessous dit précisément ce qui manque.
+        Zone › Workers Routes › Edit, Compte › Workers KV Storage › Edit, Compte › Workers Scripts › Edit. Le test ci-dessous dit précisément ce qui manque.
       </SecretCloudflare>
       <div className="setting">
         <div>

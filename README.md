@@ -122,7 +122,7 @@ jamais dans Google. Il faut une fois, avant la première publication :
    Personnalisé**, permissions :
    - Zone › DNS › **Edit**
    - Zone › Zone › **Read**
-   - Compte › Workers Routes › **Edit**
+   - Zone › Workers Routes › **Edit**
    - Compte › Workers KV Storage › **Edit**
    - Compte › Workers Scripts › **Edit**
 
