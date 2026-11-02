@@ -1,0 +1,61 @@
+---
+/**
+ * Pourquoi nous « encadré » : grande image à gauche (cadre du thème, pleine hauteur au bureau) et, à droite,
+ * un bloc bordé qui porte le titre et les arguments en liste avec icônes. Image requise. Pour 2 à 4 arguments.
+ */
+import { Picture } from "astro:assets";
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre } from "../lib/site.ts";
+import { imageRequise } from "../lib/images.ts";
+import Section from "../components/Section.astro";
+import Surtitre from "../components/Surtitre.astro";
+import Icone from "../components/Icone.astro";
+import Cadre from "../components/Cadre.astro";
+interface Props {
+  section: SectionDe<"pourquoi">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const img = imageRequise(c.image);
+const sombre = fond === "sombre";
+---
+
+<Section id={id} fond={fond}>
+  <div class="conteneur grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-stretch lg:gap-16">
+    <Cadre class="aspect-[4/3] md:aspect-[16/10] lg:aspect-auto lg:min-h-[32rem]" sombre={sombre}>
+      <Picture
+        src={img.src}
+        alt={img.alt}
+        widths={[480, 720, 960, 1280].filter((w) => w <= img.src.width)}
+        sizes="(min-width: 1280px) 520px, (min-width: 1024px) 42vw, 100vw"
+        formats={["avif", "webp"]}
+        quality={60}
+        class="absolute inset-0 h-full w-full object-cover"
+        style={`object-position:${img.focale}`}
+      />
+    </Cadre>
+    <div class="self-center rounded-ui-l border-2 border-current/15 p-6 sm:p-10 lg:p-12">
+      <Surtitre texte={c.surtitre} />
+      <h2 id={`${id}-titre`} class:list={["titre-bloc", c.surtitre && "mt-4"]}>{c.titre}</h2>
+      {c.intro && <p class="texte-doux mt-5 text-[1.0625rem] leading-relaxed">{c.intro}</p>}
+      <ul class="mt-8 space-y-6">
+        {
+          c.items.map((it) => (
+            <li class="grid grid-cols-[2.75rem_minmax(0,1fr)] gap-4">
+              <span class:list={["grid size-11 place-items-center rounded-ui", sombre ? "bg-accent-sur-sombre/15 text-accent-sur-sombre" : "bg-accent/15 text-accent-texte"]}>
+                <Icone nom={it.icone ?? "check"} class="size-5" />
+              </span>
+              <div>
+                <h3 class="text-lg md:text-xl">{it.titre}</h3>
+                <p class="texte-doux mt-1.5 leading-relaxed">{it.texte}</p>
+              </div>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</Section>

@@ -1,0 +1,71 @@
+---
+/**
+ * Devis « appel » : le téléphone d'abord. À gauche un grand bloc sombre avec le numéro en très grand, les horaires et
+ * l'adresse ; à droite le formulaire dans une carte claire, « ou décrivez votre besoin ». Pour les métiers d'urgence.
+ */
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, site, tel } from "../lib/site.ts";
+import { horairesFr } from "../lib/format.ts";
+import Section from "../components/Section.astro";
+import TitreSection from "../components/TitreSection.astro";
+import FormulaireDevis from "../components/FormulaireDevis.astro";
+import Icone from "../components/Icone.astro";
+interface Props {
+  section: SectionDe<"devis">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const e = site.entreprise;
+const horaires = horairesFr(e.horaires);
+const sombre = fond === "sombre";
+---
+
+<Section id={id} fond={fond}>
+  <div class="conteneur">
+    <TitreSection id={id} surtitre={c.surtitre} titre={c.titre} intro={c.intro} />
+    <div class="mt-12 grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-8">
+      <aside
+        aria-label="Appeler directement"
+        class:list={["sur-sombre rounded-ui-l p-7 text-sur-sombre sm:p-10 lg:sticky lg:top-28 lg:self-start", sombre ? "border border-white/12 bg-sombre-surface" : "bg-sombre"]}
+      >
+        <p class="text-sm font-semibold tracking-[0.14em] text-accent-sur-sombre uppercase">Le plus simple : appelez</p>
+        <a href={tel.lien} class="mt-4 block font-titres text-[2.25rem] leading-tight text-sur-sombre tabular-nums no-underline hover:text-accent-sur-sombre sm:text-[2.75rem]">
+          {tel.affiche}
+        </a>
+        <a href={tel.lien} class="btn btn-primaire mt-6 w-full sm:w-fit">
+          <Icone nom="phone" />
+          Appeler maintenant
+        </a>
+        <dl class="mt-8 space-y-4 border-t border-white/12 pt-6 text-[0.9375rem]">
+          {
+            horaires.length > 0 && (
+              <div class="flex gap-3">
+                <dt class="sr-only">Horaires</dt>
+                <Icone nom="clock" class="mt-1 size-[1.125rem] shrink-0 text-accent-sur-sombre" />
+                <dd class="space-y-1">
+                  {horaires.map((h) => (
+                    <p>
+                      <span class="font-medium">{h.jours}</span>, <span class="text-sur-sombre-doux">{h.heures}</span>
+                    </p>
+                  ))}
+                </dd>
+              </div>
+            )
+          }
+          <div class="flex gap-3">
+            <dt class="sr-only">Adresse</dt>
+            <Icone nom="map-pin" class="mt-1 size-[1.125rem] shrink-0 text-accent-sur-sombre" />
+            <dd class="text-sur-sombre-doux">{e.adresse.rue}<br />{e.adresse.codePostal} {e.adresse.commune}</dd>
+          </div>
+        </dl>
+      </aside>
+      <div class="sur-clair rounded-ui-l border border-trait bg-fond p-6 text-encre shadow-[0_30px_60px_-40px_rgb(0_0_0/0.35)] sm:p-9">
+        <p class="mb-6 font-titres text-xl">Ou décrivez votre besoin</p>
+        <FormulaireDevis contenu={c} />
+      </div>
+    </div>
+  </div>
+</Section>

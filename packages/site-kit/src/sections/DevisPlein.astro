@@ -1,0 +1,74 @@
+---
+/**
+ * Devis « plein » : formulaire pleine largeur. Titre et intro en haut, coordonnées directes (téléphone en grand,
+ * email, horaires) en bandeau horizontal, puis le formulaire dans une carte large.
+ */
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, site, tel } from "../lib/site.ts";
+import { horairesFr } from "../lib/format.ts";
+import Section from "../components/Section.astro";
+import TitreSection from "../components/TitreSection.astro";
+import FormulaireDevis from "../components/FormulaireDevis.astro";
+import Icone from "../components/Icone.astro";
+interface Props {
+  section: SectionDe<"devis">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const e = site.entreprise;
+const horaires = horairesFr(e.horaires);
+const sombre = fond === "sombre";
+---
+
+<Section id={id} fond={fond}>
+  <div class="conteneur">
+    <TitreSection id={id} surtitre={c.surtitre} titre={c.titre} intro={c.intro} />
+    <ul class:list={["mt-10 grid gap-6 border-y py-6 sm:grid-cols-2 lg:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] lg:gap-12", sombre ? "border-white/12" : "border-current/12"]}>
+      <li>
+        <a href={tel.lien} class="group flex items-center gap-4 no-underline">
+          <span class="grid size-12 shrink-0 place-items-center rounded-ui bg-accent text-sur-accent">
+            <Icone nom="phone" class="size-5" />
+          </span>
+          <span>
+            <span class="texte-doux block text-sm">Par téléphone</span>
+            <span class="font-titres text-[1.75rem] leading-tight tabular-nums group-hover:underline">{tel.affiche}</span>
+          </span>
+        </a>
+      </li>
+      {
+        e.email && (
+          <li class="min-w-0">
+            <a href={`mailto:${e.email}`} class="group flex min-h-12 items-center gap-4 no-underline">
+              <Icone nom="mail" class="size-5 shrink-0 texte-accent" />
+              <span class="min-w-0">
+                <span class="texte-doux block text-sm">Par email</span>
+                <span class="block font-medium break-all group-hover:underline">{e.email}</span>
+              </span>
+            </a>
+          </li>
+        )
+      }
+      {
+        horaires.length > 0 && (
+          <li class="flex items-start gap-4">
+            <Icone nom="clock" class="mt-1 size-5 shrink-0 texte-accent" />
+            <span>
+              <span class="texte-doux block text-sm">Horaires</span>
+              {horaires.map((h) => (
+                <span class="block">
+                  {h.jours}, {h.heures}
+                </span>
+              ))}
+            </span>
+          </li>
+        )
+      }
+    </ul>
+    <div class="sur-clair mt-10 rounded-ui-l border border-trait bg-fond p-6 text-encre shadow-[0_30px_60px_-40px_rgb(0_0_0/0.35)] sm:p-10 lg:p-12">
+      <FormulaireDevis contenu={c} />
+    </div>
+  </div>
+</Section>

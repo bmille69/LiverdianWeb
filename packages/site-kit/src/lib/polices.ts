@@ -4,7 +4,7 @@
  * Chaque police a une police de repli système ajustée (size-adjust, ascent/descent-override)
  * calculée depuis les métriques Capsize : pas de saut de mise en page au chargement.
  */
-import type { Police } from "../schema.ts";
+import type { PairePolices, Police } from "../schema.ts";
 
 export type DefPolice = {
   /** Nom CSS de la famille déclarée dans @font-face. */
@@ -145,4 +145,180 @@ export const POLICES_DEF: Record<Police, DefPolice> = {
     poidsTitre: 650,
     approche: "-0.02em",
   },
+  bitter: {
+    famille: "Bitter Variable",
+    paquet: "@fontsource-variable/bitter",
+    fichiers: variable("bitter"),
+    metriques: "bitter",
+    base: "georgia",
+    poidsTitre: 700,
+    approche: "-0.015em",
+  },
+  "dm-sans": {
+    famille: "DM Sans Variable",
+    paquet: "@fontsource-variable/dm-sans",
+    fichiers: variable("dm-sans"),
+    metriques: "dMSans",
+    base: "arial",
+    poidsTitre: 700,
+    approche: "-0.03em",
+  },
+  figtree: {
+    famille: "Figtree Variable",
+    paquet: "@fontsource-variable/figtree",
+    fichiers: variable("figtree"),
+    metriques: "figtree",
+    base: "arial",
+    poidsTitre: 750,
+    approche: "-0.02em",
+  },
+  "hanken-grotesk": {
+    famille: "Hanken Grotesk Variable",
+    paquet: "@fontsource-variable/hanken-grotesk",
+    fichiers: variable("hanken-grotesk"),
+    metriques: "hankenGrotesk",
+    base: "arial",
+    poidsTitre: 700,
+    approche: "-0.025em",
+  },
+  "instrument-sans": {
+    famille: "Instrument Sans Variable",
+    paquet: "@fontsource-variable/instrument-sans",
+    fichiers: variable("instrument-sans"),
+    metriques: "instrumentSans",
+    base: "arial",
+    poidsTitre: 650,
+    approche: "-0.02em",
+  },
+  "instrument-serif": {
+    famille: "Instrument Serif",
+    paquet: "@fontsource/instrument-serif",
+    fichiers: [{ fichier: "files/instrument-serif-latin-400-normal.woff2", poids: "400" }],
+    metriques: "instrumentSerif",
+    base: "georgia",
+    poidsTitre: 400,
+    approche: "-0.01em",
+  },
+  "libre-franklin": {
+    famille: "Libre Franklin Variable",
+    paquet: "@fontsource-variable/libre-franklin",
+    fichiers: variable("libre-franklin"),
+    metriques: "libreFranklin",
+    base: "arial",
+    poidsTitre: 750,
+    approche: "-0.025em",
+  },
+  literata: {
+    famille: "Literata Variable",
+    paquet: "@fontsource-variable/literata",
+    fichiers: variable("literata"),
+    metriques: "literata",
+    base: "georgia",
+    poidsTitre: 650,
+    approche: "-0.015em",
+  },
+  newsreader: {
+    famille: "Newsreader Variable",
+    paquet: "@fontsource-variable/newsreader",
+    fichiers: variable("newsreader"),
+    metriques: "newsreader",
+    base: "georgia",
+    poidsTitre: 600,
+    approche: "-0.02em",
+  },
+  oswald: {
+    famille: "Oswald Variable",
+    paquet: "@fontsource-variable/oswald",
+    fichiers: variable("oswald"),
+    metriques: "oswald",
+    base: "arial",
+    poidsTitre: 600,
+    approche: "0em",
+  },
+  "public-sans": {
+    famille: "Public Sans Variable",
+    paquet: "@fontsource-variable/public-sans",
+    fichiers: variable("public-sans"),
+    metriques: "publicSans",
+    base: "arial",
+    poidsTitre: 750,
+    approche: "-0.025em",
+  },
+  "red-hat-display": {
+    famille: "Red Hat Display Variable",
+    paquet: "@fontsource-variable/red-hat-display",
+    fichiers: variable("red-hat-display"),
+    metriques: "redHatDisplay",
+    base: "arial",
+    poidsTitre: 750,
+    approche: "-0.02em",
+  },
+  "roboto-slab": {
+    famille: "Roboto Slab Variable",
+    paquet: "@fontsource-variable/roboto-slab",
+    fichiers: variable("roboto-slab"),
+    metriques: "robotoSlab",
+    base: "georgia",
+    poidsTitre: 650,
+    approche: "-0.02em",
+  },
+  sora: {
+    famille: "Sora Variable",
+    paquet: "@fontsource-variable/sora",
+    fichiers: variable("sora"),
+    metriques: "sora",
+    base: "arial",
+    poidsTitre: 650,
+    approche: "-0.035em",
+  },
+  "young-serif": {
+    famille: "Young Serif",
+    paquet: "@fontsource/young-serif",
+    fichiers: [{ fichier: "files/young-serif-latin-400-normal.woff2", poids: "400" }],
+    metriques: "youngSerif",
+    base: "georgia",
+    poidsTitre: 400,
+    approche: "-0.015em",
+  },
+};
+
+export type CaracterePolices = "technique" | "net" | "robuste" | "editorial" | "chaleureux" | "patrimoine" | "contemporain";
+
+export type DefPaire = {
+  titres: Police;
+  corps: Police;
+  caractere: CaracterePolices;
+  /** Ce que la paire raconte, pour le Directeur artistique. */
+  description: string;
+  /** Métiers auxquels elle convient le mieux (indicatif, jamais une obligation). */
+  metiers: string[];
+};
+
+/**
+ * Paires de polices auto-hébergées, classées par caractère. Le Directeur artistique choisit une paire
+ * (`theme.polices.paire`) ; deux sites du même métier n'ont jamais la même paire (contrôle d'unicité du hub).
+ */
+export const PAIRES_DEF: Record<PairePolices, DefPaire> = {
+  "atelier-technique": { titres: "archivo", corps: "inter", caractere: "technique", description: "Grotesque large et précise, corps neutre : plan, mesure, sécurité.", metiers: ["electricien", "chauffagiste"] },
+  "plan-de-coupe": { titres: "space-grotesk", corps: "source-sans-3", caractere: "technique", description: "Grotesque à détails mécaniques, corps humaniste lisible : ingénieux sans froideur.", metiers: ["electricien", "plombier"] },
+  "chantier-net": { titres: "public-sans", corps: "public-sans", caractere: "net", description: "Une seule famille, administrative et franche : sérieux, sans effet.", metiers: ["electricien", "plombier", "chauffagiste"] },
+  "grotesque-franche": { titres: "schibsted-grotesk", corps: "inter", caractere: "net", description: "Grotesque de presse serrée : direct, contemporain.", metiers: ["peintre", "electricien"] },
+  "geometrie-douce": { titres: "manrope", corps: "dm-sans", caractere: "contemporain", description: "Géométrique arrondie, corps géométrique léger : moderne, accueillant.", metiers: ["chauffagiste", "plombier"] },
+  "contemporain-clair": { titres: "sora", corps: "figtree", caractere: "contemporain", description: "Géométrique large et aérée : jeune entreprise, technologie (domotique, pompe à chaleur).", metiers: ["electricien", "chauffagiste"] },
+  "industriel-condense": { titres: "barlow-semi-condensed", corps: "plus-jakarta-sans", caractere: "robuste", description: "Condensée d'atelier, corps rond : signalétique de chantier, efficace.", metiers: ["electricien", "couvreur", "plombier"] },
+  "affiche-robuste": { titres: "oswald", corps: "work-sans", caractere: "robuste", description: "Condensée d'affiche, superbe en capitales : force, urgence, dépannage.", metiers: ["plombier", "couvreur", "electricien"] },
+  signaletique: { titres: "red-hat-display", corps: "hanken-grotesk", caractere: "net", description: "Grotesque de signalétique, chiffres nets : clair, organisé.", metiers: ["electricien", "chauffagiste", "plombier"] },
+  "editorial-serif": { titres: "newsreader", corps: "instrument-sans", caractere: "editorial", description: "Serif de journal fine, corps grotesque : posé, expert, haut de gamme.", metiers: ["menuisier", "peintre", "electricien"] },
+  "maison-de-famille": { titres: "young-serif", corps: "figtree", caractere: "chaleureux", description: "Serif ronde et généreuse : entreprise familiale, proximité.", metiers: ["menuisier", "chauffagiste", "plombier"] },
+  "gazette-locale": { titres: "literata", corps: "libre-franklin", caractere: "editorial", description: "Serif de livre, corps franklin : enraciné, sérieux, local.", metiers: ["couvreur", "menuisier", "chauffagiste"] },
+  "artisan-d-art": { titres: "fraunces", corps: "work-sans", caractere: "patrimoine", description: "Serif à caractère, douce et contrastée : savoir-faire, matière.", metiers: ["couvreur", "menuisier"] },
+  "bois-et-papier": { titres: "dm-serif-display", corps: "dm-sans", caractere: "chaleureux", description: "Didone généreuse et corps géométrique : élégant, chaleureux.", metiers: ["menuisier", "peintre"] },
+  "elegance-sobre": { titres: "instrument-serif", corps: "inter", caractere: "editorial", description: "Serif condensée élégante en grands corps : finitions, décoration.", metiers: ["peintre", "menuisier"] },
+  patrimoine: { titres: "fraunces", corps: "source-sans-3", caractere: "patrimoine", description: "Serif ancienne chaleureuse : bâti ancien, pierre, restauration.", metiers: ["couvreur", "menuisier"] },
+  "slab-robuste": { titres: "roboto-slab", corps: "inter", caractere: "robuste", description: "Égyptienne solide : fiable, mécanique, durable.", metiers: ["plombier", "chauffagiste", "couvreur"] },
+  "slab-editorial": { titres: "bitter", corps: "hanken-grotesk", caractere: "chaleureux", description: "Égyptienne d'écran douce : pédagogue, rassurant.", metiers: ["chauffagiste", "plombier", "electricien"] },
+  "rondeur-accueillante": { titres: "plus-jakarta-sans", corps: "figtree", caractere: "contemporain", description: "Grotesques rondes et ouvertes : service, disponibilité.", metiers: ["plombier", "electricien"] },
+  "precision-suisse": { titres: "instrument-sans", corps: "public-sans", caractere: "net", description: "Grotesque suisse serrée : rigueur, propreté du travail.", metiers: ["electricien", "peintre"] },
+  "caractere-fort": { titres: "bricolage-grotesque", corps: "source-sans-3", caractere: "chaleureux", description: "Grotesque à forte personnalité : artisan qui a du caractère.", metiers: ["plombier", "peintre"] },
+  "classique-moderne": { titres: "literata", corps: "dm-sans", caractere: "patrimoine", description: "Serif de texte en titres, corps géométrique : classique sans être daté.", metiers: ["couvreur", "menuisier", "peintre"] },
 };

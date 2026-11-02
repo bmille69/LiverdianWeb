@@ -1,0 +1,98 @@
+---
+/**
+ * Réalisations « diptyque » : deux grandes images côte à côte (la seconde décalée vers le bas au bureau),
+ * légendes éditoriales numérotées, puis les images suivantes en rangée de vignettes. 3 à 6 images.
+ */
+import { Picture } from "astro:assets";
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, demo } from "../lib/site.ts";
+import { imageRequise } from "../lib/images.ts";
+import Section from "../components/Section.astro";
+import TitreSection from "../components/TitreSection.astro";
+interface Props {
+  section: SectionDe<"realisations">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const grandes = c.images.slice(0, 2);
+const petites = c.images.slice(2, 6);
+const fondImage = fond === "sombre" ? "bg-sombre-surface" : "bg-teinte";
+---
+
+<Section id={id} fond={fond}>
+  <div class="conteneur">
+    <TitreSection id={id} surtitre={c.surtitre} titre={c.titre} intro={c.intro} />
+    <ul class="mt-12 grid gap-10 md:mt-16 md:grid-cols-2 md:gap-8 lg:gap-12">
+      {
+        grandes.map((it, i) => {
+          const img = imageRequise(it.image);
+          return (
+            <li class:list={[i === 1 && "md:mt-24"]}>
+              <figure>
+                <div class:list={["media aspect-[4/5] overflow-hidden rounded-ui-l", fondImage]}>
+                  <Picture
+                    src={img.src}
+                    alt={img.alt}
+                    widths={[480, 720, 960, 1280].filter((w) => w <= img.src.width)}
+                    sizes="(min-width: 1280px) 580px, (min-width: 768px) 46vw, 100vw"
+                    formats={["avif", "webp"]}
+                    quality={60}
+                    class="h-full w-full object-cover"
+                    style={`object-position:${img.focale}`}
+                  />
+                </div>
+                {it.legende && (
+                  <figcaption class="mt-5 grid grid-cols-[3rem_minmax(0,1fr)] gap-3 border-t border-current/15 pt-4">
+                    <span aria-hidden="true" class="font-titres text-2xl leading-none texte-accent tabular-nums">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span class="text-[1.0625rem] leading-snug">{it.legende}</span>
+                  </figcaption>
+                )}
+              </figure>
+            </li>
+          );
+        })
+      }
+    </ul>
+    {
+      petites.length > 0 && (
+        <ul class:list={["mt-12 grid grid-cols-2 gap-4 sm:gap-5 md:mt-16", petites.length === 3 && "md:grid-cols-3", petites.length === 4 && "md:grid-cols-4"]}>
+          {petites.map((it, j) => {
+            const img = imageRequise(it.image);
+            // Vignette seule sur sa rangée mobile : pleine largeur, format plus allongé.
+            const seule = petites.length % 2 === 1 && j === petites.length - 1;
+            return (
+              <li class:list={[seule && "max-md:col-span-2"]}>
+                <figure>
+                  <div class:list={["media aspect-[4/3] overflow-hidden rounded-ui-l", seule && "max-md:aspect-[2/1]", fondImage]}>
+                    <Picture
+                      src={img.src}
+                      alt={img.alt}
+                      widths={[320, 480, 640].filter((w) => w <= img.src.width)}
+                      sizes="(min-width: 768px) 25vw, 50vw"
+                      formats={["avif", "webp"]}
+                      quality={58}
+                      class="h-full w-full object-cover"
+                      style={`object-position:${img.focale}`}
+                    />
+                  </div>
+                  {it.legende && (
+                    <figcaption class="texte-doux mt-2.5 text-sm leading-snug">
+                      <span aria-hidden="true" class="font-titres texte-accent tabular-nums">{String(j + 3).padStart(2, "0")} </span>
+                      {it.legende}
+                    </figcaption>
+                  )}
+                </figure>
+              </li>
+            );
+          })}
+        </ul>
+      )
+    }
+    {demo && <p class="texte-doux mt-10 text-sm">Photos d’illustration : elles seront remplacées par vos chantiers.</p>}
+  </div>
+</Section>

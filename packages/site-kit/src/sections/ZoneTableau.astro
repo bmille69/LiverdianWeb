@@ -1,0 +1,75 @@
+---
+/**
+ * Zone « tableau » : les communes desservies en tableau sémantique, avec la distance à vol d'oiseau depuis le siège
+ * (calculée depuis les coordonnées, « — » si elles manquent), triées de la plus proche à la plus lointaine.
+ * Colonne de gauche : titre, intro, précision, téléphone. Plus factuel que la carte.
+ */
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, site, tel, ancreDevis } from "../lib/site.ts";
+import { distanceKm } from "../lib/carte.ts";
+import Section from "../components/Section.astro";
+import TitreSection from "../components/TitreSection.astro";
+import Icone from "../components/Icone.astro";
+interface Props {
+  section: SectionDe<"zone">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const z = site.zone;
+const sombre = fond === "sombre";
+const lignes = z.voisines
+  .map((v) => ({ nom: v.nom, km: distanceKm(z.commune, v) }))
+  .sort((a, b) => (a.km ?? 999) - (b.km ?? 999));
+const kmFr = (k: number | null) => (k === null ? "—" : k < 1 ? "< 1 km" : `${Math.round(k)} km`);
+const filet = sombre ? "border-white/12" : "border-trait";
+---
+
+<Section id={id} fond={fond}>
+  <div class="conteneur grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-20">
+    <div class="lg:sticky lg:top-28 lg:self-start">
+      <TitreSection id={id} surtitre={c.surtitre} titre={c.titre} intro={c.intro} />
+      {z.precision && <p class="texte-doux mt-5 text-[0.9375rem]">{z.precision}</p>}
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a href={tel.lien} class="btn btn-primaire"><Icone nom="phone" /> <span class="tabular-nums">{tel.affiche}</span></a>
+        <a href={ancreDevis} class="btn btn-secondaire">Demander un devis</a>
+      </div>
+    </div>
+    <div>
+      <table class="w-full border-collapse text-left text-[1.0625rem]">
+        <caption class="texte-doux pb-4 text-left text-sm">
+          Communes desservies depuis {z.commune.nom}, distances à vol d’oiseau.
+        </caption>
+        <thead>
+          <tr class:list={["border-b-2 text-sm uppercase tracking-[0.1em]", sombre ? "border-white/25" : "border-encre/20"]}>
+            <th scope="col" class="py-3 font-semibold">Commune</th>
+            <th scope="col" class="py-3 text-right font-semibold">Distance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class:list={["border-b", filet]}>
+            <th scope="row" class="py-4 font-titres text-xl font-normal">
+              <span class="flex items-center gap-2.5">
+                <Icone nom="map-pin" class="size-5 shrink-0 texte-accent" />
+                {z.commune.nom}
+              </span>
+            </th>
+            <td class="py-4 text-right">
+              <span class:list={["inline-flex rounded-ui px-2.5 py-1 text-sm font-semibold", sombre ? "bg-accent-sur-sombre text-sombre" : "bg-sombre text-sur-sombre"]}>siège</span>
+            </td>
+          </tr>
+          {
+            lignes.map((l) => (
+              <tr class:list={["border-b", filet]}>
+                <th scope="row" class="py-3.5 font-normal">{l.nom}</th>
+                <td class="texte-doux py-3.5 text-right tabular-nums">{kmFr(l.km)}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</Section>

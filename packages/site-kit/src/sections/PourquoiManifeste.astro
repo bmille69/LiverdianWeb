@@ -25,7 +25,7 @@ const img = image(c.image);
   <div class="conteneur grid gap-14 lg:grid-cols-2 lg:gap-20">
     <div>
       <Surtitre texte={c.surtitre} />
-      <h2 id={`${id}-titre`} class="mt-4 text-[2.25rem] leading-[1.06] md:text-[3rem] lg:text-[3.5rem]">{c.titre}</h2>
+      <h2 id={`${id}-titre`} class="titre-section mt-4">{c.titre}</h2>
       {c.intro && <p class="intro texte-doux mt-6">{c.intro}</p>}
       {
         img && (

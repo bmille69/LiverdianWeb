@@ -812,3 +812,33 @@
     margin: 0 auto;
   }
 }
+
+/* Ligne « Unicité » sous le bandeau d'état du site (registre des sites). */
+.fab-unicite {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-2);
+}
+.fab-unicite svg {
+  flex: none;
+  margin-top: 2px;
+}
+.fab-unicite.ok svg {
+  color: var(--accent);
+}
+.fab-unicite.ko {
+  border-color: color-mix(in oklab, var(--warm), transparent 50%);
+}
+.fab-unicite.ko svg {
+  color: var(--warm);
+}
+.fab-unicite strong {
+  color: var(--text);
+  font-weight: 600;
+}

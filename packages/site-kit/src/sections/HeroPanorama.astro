@@ -1,0 +1,48 @@
+---
+/**
+ * Hero « panorama » : grand titre et boutons sur fond clair (titre à gauche, sous-titre + boutons à droite au bureau,
+ * alignés en bas), puis une grande photo panoramique sous le texte. Le texte ne passe jamais sur la photo :
+ * bon choix pour une photo large, belle mais chargée. Image chargée en priorité.
+ */
+import { Picture } from "astro:assets";
+import type { SectionDe } from "../schema.ts";
+import { imageRequise } from "../lib/images.ts";
+import Surtitre from "../components/Surtitre.astro";
+import TitreHero from "../components/TitreHero.astro";
+import BoutonsHero from "../components/BoutonsHero.astro";
+interface Props {
+  section: SectionDe<"hero">;
+}
+const { contenu: c } = Astro.props.section;
+const img = imageRequise(c.image);
+---
+
+<section id="haut" aria-labelledby="haut-titre" class="fond-clair relative isolate overflow-hidden">
+  <div class="conteneur pt-10 md:pt-16 lg:pt-20">
+    <div class="grid gap-7 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-end lg:gap-16">
+      <div>
+        <Surtitre texte={c.surtitre} />
+        <TitreHero titre={c.titre} accent={c.titreAccent} class="h1-hero-xl mt-5" />
+      </div>
+      <div class="lg:pb-2">
+        <p class="texte-doux text-[1.0625rem] leading-relaxed sm:text-lg md:text-xl">{c.sousTitre}</p>
+        <BoutonsHero contenu={c} class="mt-8" />
+      </div>
+    </div>
+    <div class="media mt-10 aspect-[4/3] overflow-hidden rounded-ui-l bg-teinte sm:aspect-[16/9] md:mt-14 lg:aspect-[21/9]">
+      <Picture
+        src={img.src}
+        alt={img.alt}
+        widths={[640, 960, 1280, 1600, 2000, 2400].filter((w) => w <= img.src.width)}
+        sizes="(min-width: 1248px) 1184px, calc(100vw - 2.5rem)"
+        formats={["avif", "webp"]}
+        quality={58}
+        loading="eager"
+        fetchpriority="high"
+        class="h-full w-full object-cover"
+        style={`object-position:${img.focale}`}
+      />
+    </div>
+  </div>
+  <div aria-hidden="true" class="h-14 md:h-20 lg:h-24"></div>
+</section>

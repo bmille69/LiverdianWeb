@@ -1,0 +1,95 @@
+---
+/**
+ * Réalisations « bande » : photos hautes en bande horizontale défilante (scroll-snap, sans JavaScript).
+ * La bande déborde à droite du conteneur pour inviter à faire défiler ; zone défilante accessible au clavier.
+ * Fond préféré sombre (les photos ressortent). Pour 3 à 8 images.
+ */
+import { Picture } from "astro:assets";
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, demo } from "../lib/site.ts";
+import { imageRequise } from "../lib/images.ts";
+import Section from "../components/Section.astro";
+import TitreSection from "../components/TitreSection.astro";
+import Icone from "../components/Icone.astro";
+interface Props {
+  section: SectionDe<"realisations">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const sombre = fond === "sombre";
+---
+
+<Section id={id} fond={fond}>
+  <div class="conteneur flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+    <TitreSection id={id} surtitre={c.surtitre} titre={c.titre} intro={c.intro} />
+    <p class="texte-doux flex shrink-0 items-center gap-2 text-sm">
+      <Icone nom="move-horizontal" class="size-4" />
+      Faites défiler
+    </p>
+  </div>
+  <div
+    class="bande-defilante mt-12 overflow-x-auto overscroll-x-contain pb-6 md:mt-16"
+    tabindex="0"
+    role="region"
+    aria-label={`${c.titre} : photos, faire défiler horizontalement`}
+  >
+    <ul class="bande-piste flex w-max gap-4 sm:gap-6">
+      {
+        c.images.map((it, i) => {
+          const img = imageRequise(it.image);
+          return (
+            <li class="w-[72vw] shrink-0 snap-start sm:w-[22rem] lg:w-[24rem]">
+              <figure>
+                <div class:list={["media aspect-[4/5] overflow-hidden rounded-ui-l", sombre ? "bg-sombre-surface" : "bg-teinte"]}>
+                  <Picture
+                    src={img.src}
+                    alt={img.alt}
+                    widths={[360, 540, 720, 960].filter((w) => w <= img.src.width)}
+                    sizes="(min-width: 1024px) 384px, (min-width: 640px) 352px, 72vw"
+                    formats={["avif", "webp"]}
+                    quality={58}
+                    class="h-full w-full object-cover"
+                    style={`object-position:${img.focale}`}
+                  />
+                </div>
+                {it.legende && (
+                  <figcaption class="mt-4 flex gap-3 text-[0.9375rem] leading-snug">
+                    <span aria-hidden="true" class="font-titres texte-accent tabular-nums">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span>{it.legende}</span>
+                  </figcaption>
+                )}
+              </figure>
+            </li>
+          );
+        })
+      }
+    </ul>
+  </div>
+  {demo && <p class="conteneur texte-doux mt-4 text-sm">Photos d’illustration : elles seront remplacées par vos chantiers.</p>}
+</Section>
+
+<style>
+  .bande-defilante {
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: max(1.25rem, calc((100vw - 78rem) / 2 + 2rem));
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, currentColor, transparent 65%) transparent;
+  }
+  /* La piste commence à l'alignement du conteneur et déborde à droite. */
+  .bande-piste {
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 48rem) {
+    .bande-piste {
+      padding-inline: max(2rem, calc((100vw - 78rem) / 2 + 2rem));
+    }
+  }
+  .bande-defilante:focus-visible {
+    outline-offset: -3px;
+  }
+</style>

@@ -27,7 +27,13 @@ const ogImage = base ? `${base}/og.jpg` : "/og.jpg";
 ---
 
 <!doctype html>
-<html lang="fr" data-signature={theme.signature}>
+<html
+  lang="fr"
+  data-signature={theme.signature}
+  data-images={theme.mise.images}
+  data-boutons={theme.mise.boutons}
+  data-titres={theme.mise.titres}
+>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

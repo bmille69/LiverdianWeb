@@ -27,6 +27,7 @@ const MENU_DEFAUT: Record<Section["type"], string | false> = {
   zone: "Zone",
   appel: false,
   devis: false,
+  surmesure: false,
 };
 
 export function ancre(s: Section): string {
@@ -59,38 +60,71 @@ export const titresServices = site.sections.flatMap((s) => (s.type === "services
 
 /**
  * Fonds des sections : alternance automatique pour que deux sections consécutives n'aient jamais le même fond.
- * Chaque variante déclare le fond qu'elle préfère ; on corrige s'il répète le précédent.
+ * Chaque variante déclare le fond qu'elle préfère, transformé par le rythme du site (`theme.mise.rythme`) ;
+ * une section peut imposer le sien (`fond`). On corrige s'il répète le précédent.
  */
 export type Fond = "clair" | "surface" | "teinte" | "sombre";
 const FOND_PREFERE: Record<string, Fond> = {
   "hero:photo": "sombre",
   "hero:typo": "teinte",
   "hero:scinde": "clair",
+  "hero:panorama": "clair",
+  "hero:encart": "sombre",
   "services:cartes": "clair",
   "services:liste": "surface",
   "services:bandes": "clair",
+  "services:index": "surface",
+  "services:tuiles": "teinte",
   "pourquoi:colonnes": "teinte",
   "pourquoi:manifeste": "sombre",
+  "pourquoi:etapes": "clair",
+  "pourquoi:encadre": "surface",
   "realisations:mosaique": "surface",
   "realisations:grille": "clair",
+  "realisations:bande": "sombre",
+  "realisations:diptyque": "clair",
   "avis:badge": "teinte",
   "avis:bandeau": "sombre",
   "zone:carte": "clair",
   "zone:liste": "teinte",
+  "zone:tableau": "surface",
+  "zone:bandeau": "sombre",
   "appel:bande": "sombre",
   "appel:carte": "clair",
   "devis:scinde": "teinte",
   "devis:encadre": "sombre",
+  "devis:plein": "teinte",
+  "devis:appel": "clair",
+  "surmesure:composant": "teinte",
 };
 const ROTATION: Fond[] = ["clair", "teinte", "surface", "sombre"];
+
+/** Rythme des fonds : « contraste » assombrit les sections teintées, « clair » éclaircit les sombres, « chaud » teinte la page. */
+function selonRythme(f: Fond, cle: string): Fond {
+  switch (theme.mise.rythme) {
+    case "contraste":
+      return f === "teinte" ? "sombre" : f;
+    case "clair":
+      // Les bandes d'appel et d'avis restent sombres : ce sont des ponctuations voulues.
+      return f === "sombre" && cle !== "appel:bande" && cle !== "avis:bandeau" ? "teinte" : f;
+    case "chaud":
+      return f === "clair" ? "teinte" : f === "teinte" ? "surface" : f;
+    default:
+      return f;
+  }
+}
 
 export const fonds: Fond[] = (() => {
   const out: Fond[] = [];
   site.sections.forEach((s, i) => {
-    let f = FOND_PREFERE[`${s.type}:${s.variante}`] ?? "clair";
+    const cle = `${s.type}:${s.variante}`;
+    // Le hero porte son propre fond (il n'en change pas) ; les autres suivent le rythme, sauf fond imposé.
+    let f = s.type === "hero" ? (FOND_PREFERE[cle] ?? "clair") : (s.fond ?? selonRythme(FOND_PREFERE[cle] ?? "clair", cle));
     const prev = out[i - 1];
     // clair et surface sont trop proches pour se suivre.
     const proche = (a: Fond, b?: Fond) => a === b || (b !== undefined && a !== "sombre" && a !== "teinte" && b !== "sombre" && b !== "teinte");
+    // Rythme « contraste » : une section sur deux passe en sombre (si la précédente ne l'est pas déjà).
+    if (theme.mise.rythme === "contraste" && s.type !== "hero" && !s.fond && i % 2 === 0 && prev !== "sombre") f = "sombre";
     if (proche(f, prev)) f = ROTATION.find((c) => !proche(c, prev) && c !== "sombre") ?? "teinte";
     out.push(f);
   });

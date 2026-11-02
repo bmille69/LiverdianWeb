@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { usePath } from "./router.tsx";
 import { CompaniesPage } from "./pages/Companies.tsx";
+import { ProspectionPage } from "./pages/Prospection.tsx";
 import { SettingsPage } from "./pages/Settings.tsx";
 import { SoonPage } from "./pages/Soon.tsx";
 import { TeamPage } from "./pages/Team.tsx";
@@ -21,6 +22,7 @@ function Route({ path }: { path: string }) {
     case "sites":
       return <SitesPage />;
     case "prospection":
+      return <ProspectionPage />;
     case "commercial":
     case "finance":
       return <SoonPage id={section} />;

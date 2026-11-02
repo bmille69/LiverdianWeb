@@ -16,8 +16,8 @@ export const STATUT_LABELS: Record<Statut, string> = {
   exclu: "Exclu",
 };
 
-/** D'où vient une donnée : saisie à la main, API Sirene, Google Places, audit du site existant. */
-export const SOURCES = ["saisie", "sirene", "places", "audit"] as const;
+/** D'où vient une donnée : saisie à la main, API Sirene, Google Places, OpenStreetMap, audit du site existant. */
+export const SOURCES = ["saisie", "sirene", "places", "osm", "audit"] as const;
 export type Source = (typeof SOURCES)[number];
 
 /** Champs dont on garde la provenance (contrôle des faits, VISION §4). */
@@ -203,7 +203,8 @@ export class CompanyService {
     return fromRow(row);
   }
 
-  create(raw: unknown): Company {
+  /** `silencieux` : pas d'événement par fiche (la prospection en crée des centaines et publie un résumé). */
+  create(raw: unknown, opts: { silencieux?: boolean } = {}): Company {
     const input = CompanyInput.parse(raw);
     const id = randomUUID().slice(0, 8);
     const at = now();
@@ -243,11 +244,11 @@ export class CompanyService {
         at,
       );
     const company = this.get(id);
-    this.#events.append({ type: "company.created", subject: `company:${id}`, message: `Fiche créée : ${company.raisonSociale}` });
+    if (!opts.silencieux) this.#events.append({ type: "company.created", subject: `company:${id}`, message: `Fiche créée : ${company.raisonSociale}` });
     return company;
   }
 
-  update(id: string, raw: unknown): Company {
+  update(id: string, raw: unknown, opts: { silencieux?: boolean } = {}): Company {
     const before = this.get(id);
     const patch = CompanyPatch.parse(raw);
     const sources = { ...before.sources };
@@ -287,14 +288,14 @@ export class CompanyService {
     const cols = Object.keys(merged);
     this.#db.prepare(`UPDATE companies SET ${cols.map((c) => `${c} = ?`).join(", ")} WHERE id = ?`).run(...Object.values(merged), id);
     const after = this.get(id);
-    if (after.statut !== before.statut) {
+    if (after.statut !== before.statut && !opts.silencieux) {
       this.#events.append({
         type: "company.status",
         subject: `company:${id}`,
         message: `${after.raisonSociale} : ${STATUT_LABELS[before.statut]} → ${STATUT_LABELS[after.statut]}`,
         data: { from: before.statut, to: after.statut },
       });
-    } else {
+    } else if (!opts.silencieux) {
       this.#events.append({ type: "company.updated", subject: `company:${id}`, message: `Fiche mise à jour : ${after.raisonSociale}` });
     }
     return after;

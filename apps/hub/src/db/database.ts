@@ -158,6 +158,118 @@ export const MIGRATIONS: string[] = [
   CREATE INDEX fabrications_site ON fabrications (site_id, created_at);
   CREATE INDEX fabrications_etat ON fabrications (etat, updated_at);
   `,
+  `
+  -- Prospection (brief E). Une campagne = des critères enregistrés et relançables ; sa progression (phase) permet
+  -- la reprise après un redémarrage. Les entreprises trouvées vont dans companies ; prospects garde ce qui ne sert
+  -- qu'à la prospection (relevés Sirene utiles, appariements Places/OSM, audit, détail du score).
+  CREATE TABLE campagnes (
+    id TEXT PRIMARY KEY,
+    nom TEXT NOT NULL,
+    criteres_json TEXT NOT NULL,
+    etat TEXT NOT NULL DEFAULT 'brouillon' CHECK (etat IN ('brouillon', 'en_cours', 'terminee', 'erreur', 'annulee')),
+    phase TEXT,
+    job_id TEXT,
+    compteurs_json TEXT NOT NULL DEFAULT '{}',
+    erreur TEXT,
+    lancee_le TEXT,
+    finie_le TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE TABLE prospects (
+    company_id TEXT PRIMARY KEY REFERENCES companies (id) ON DELETE CASCADE,
+    siret TEXT,
+    lat REAL,
+    lon REAL,
+    sirene_json TEXT,
+    places_json TEXT,
+    osm_json TEXT,
+    audit_json TEXT,
+    score_json TEXT,
+    exclusion_json TEXT,
+    site_statut TEXT,
+    qualifie INTEGER NOT NULL DEFAULT 0,
+    source_le TEXT NOT NULL,
+    enrichi_le TEXT,
+    audite_le TEXT,
+    note_le TEXT,
+    updated_at TEXT NOT NULL
+  );
+
+  -- Appartenance d'une entreprise à une campagne, et l'étape atteinte pour elle (source → enrichi → audite → note | ecarte).
+  CREATE TABLE campagne_prospects (
+    campagne_id TEXT NOT NULL REFERENCES campagnes (id) ON DELETE CASCADE,
+    company_id TEXT NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
+    distance_km REAL,
+    etape TEXT NOT NULL,
+    motif TEXT,
+    ajoute_le TEXT NOT NULL,
+    maj_le TEXT NOT NULL,
+    PRIMARY KEY (campagne_id, company_id)
+  );
+  CREATE INDEX campagne_prospects_etape ON campagne_prospects (campagne_id, etape);
+
+  -- Liste d'opposition à vie : empreintes (SHA-256) du SIREN, du téléphone ou de l'email, jamais la donnée en clair.
+  CREATE TABLE opposition (
+    cle TEXT PRIMARY KEY,
+    type TEXT NOT NULL CHECK (type IN ('siren', 'telephone', 'email')),
+    motif TEXT,
+    created_at TEXT NOT NULL
+  );
+
+  -- Réponses des API mises en cache : une même requête n'est jamais repayée pendant sa durée de validité.
+  CREATE TABLE api_cache (
+    cle TEXT PRIMARY KEY,
+    source TEXT NOT NULL,
+    reponse_json TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    expire_le TEXT NOT NULL
+  );
+
+  -- Appels réellement envoyés (hors cache) : compteur, coût estimé, plafond mensuel de Google Places.
+  CREATE TABLE api_appels (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    at TEXT NOT NULL,
+    source TEXT NOT NULL,
+    campagne_id TEXT,
+    cout_usd REAL NOT NULL DEFAULT 0,
+    statut INTEGER
+  );
+  CREATE INDEX api_appels_source ON api_appels (source, at);
+
+  -- File des maquettes lancées depuis la prospection (plafond de fabrications simultanées).
+  CREATE TABLE maquettes_file (
+    id TEXT PRIMARY KEY,
+    company_id TEXT NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
+    campagne_id TEXT,
+    etat TEXT NOT NULL CHECK (etat IN ('en_attente', 'lancee', 'annulee', 'refusee')),
+    site_id TEXT,
+    message TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX maquettes_file_etat ON maquettes_file (etat, created_at);
+  `,
+  `
+  -- Registre des sites produits (brief D) : l'empreinte de chaque site (design, texte, photos), lue par les agents
+  -- et par le contrôle d'unicité. id = id du site, ou « exemple:<dossier> » pour les exemples du kit.
+  CREATE TABLE registre_sites (
+    id TEXT PRIMARY KEY,
+    origine TEXT NOT NULL CHECK (origine IN ('exemple', 'maquette')),
+    company_id TEXT,
+    nom TEXT NOT NULL,
+    metier TEXT NOT NULL,
+    commune TEXT NOT NULL,
+    lat REAL,
+    lon REAL,
+    empreinte_json TEXT NOT NULL,
+    texte TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX registre_sites_metier ON registre_sites (metier);
+  `,
 ];
 
 export function openDatabase(path: string): Db {

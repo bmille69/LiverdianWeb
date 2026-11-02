@@ -12,6 +12,14 @@ export const SETTING_DEFAULTS = {
   "agents.models": {} as Record<string, string>,
   /** Délai maximum d'un travail d'atelier (Claude Code agentique), en minutes. */
   "atelier.timeoutMinutes": 30,
+  /** Prospection : grille de score (null = grille du plan, voir prospection/scoring.ts). */
+  "prospection.grille": null as unknown,
+  /** Appels Google Places permis par mois civil (sous le quota gratuit de 1 000 appels « Enterprise »). */
+  "prospection.places.plafondMensuel": 900,
+  /** Maquettes fabriquées en même temps quand elles sont lancées depuis la prospection. */
+  "prospection.maquettes.parallele": 1,
+  /** Purge des prospects non convertis, en mois sans activité (RGPD). */
+  "prospection.purge.mois": 6,
 } as const;
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS;

@@ -1,0 +1,60 @@
+---
+/**
+ * Pourquoi nous « étapes » : arguments en étapes numérotées reliées par un trait, horizontales au bureau,
+ * verticales sur mobile. Gros numéros en police de titres, couleur d'accent. Pour 2 à 4 arguments qui se lisent
+ * dans l'ordre (de l'appel au chantier terminé, par exemple).
+ */
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre } from "../lib/site.ts";
+import Section from "../components/Section.astro";
+import TitreSection from "../components/TitreSection.astro";
+interface Props {
+  section: SectionDe<"pourquoi">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const n = c.items.length;
+const sombre = fond === "sombre";
+// Le rond du numéro reprend le fond de la section pour masquer le trait qui passe derrière.
+const FOND_ROND = { clair: "bg-fond", surface: "bg-surface", teinte: "bg-teinte", sombre: "bg-sombre" } as const;
+---
+
+<Section id={id} fond={fond}>
+  <div class="conteneur">
+    <TitreSection id={id} surtitre={c.surtitre} titre={c.titre} intro={c.intro} />
+    <ol class:list={["relative mt-12 grid gap-10 md:mt-16 lg:gap-8", n === 2 && "lg:grid-cols-2", n === 3 && "lg:grid-cols-3", n === 4 && "lg:grid-cols-4"]}>
+      {
+        c.items.map((it, i) => (
+          <li class="relative grid grid-cols-[3.5rem_minmax(0,1fr)] gap-x-5 lg:block">
+            {/* Trait vers l'étape suivante : vertical sur mobile, horizontal au bureau. */}
+            {i < n - 1 && (
+              <span
+                aria-hidden="true"
+                class:list={[
+                  "absolute top-16 bottom-[-2.5rem] left-7 w-0.5 lg:top-7 lg:right-[-2rem] lg:bottom-auto lg:left-20 lg:h-0.5 lg:w-auto",
+                  sombre ? "bg-white/15" : "bg-trait",
+                ]}
+              />
+            )}
+            <span
+              aria-hidden="true"
+              class:list={[
+                "relative grid size-14 place-items-center rounded-full border-2 border-current font-titres text-2xl leading-none tabular-nums texte-accent",
+                FOND_ROND[fond],
+              ]}
+            >
+              {i + 1}
+            </span>
+            <div class="lg:mt-7 lg:pr-4">
+              <h3 class="pt-3 text-xl md:text-[1.375rem] lg:pt-0">{it.titre}</h3>
+              <p class="texte-doux mt-3 leading-relaxed">{it.texte}</p>
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</Section>

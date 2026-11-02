@@ -9,8 +9,11 @@ import { HubError } from "../domain/errors.ts";
 import { isSettingKey, type SettingKey } from "../domain/settings.ts";
 import { RECETTES, SITE_STATUT_LABELS, SITE_STATUTS } from "../domain/sites.ts";
 import { prerequisMaquette } from "../atelier/brief.ts";
+import { lireUnicite } from "../atelier/registre.ts";
 import { EssaiInput, type Hub } from "../hub.ts";
 import { JOB_STATES } from "../jobs/job-queue.ts";
+import { Grille } from "../prospection/scoring.ts";
+import { routesProspection } from "./prospection-routes.ts";
 
 z.config(z.locales.fr());
 
@@ -47,6 +50,10 @@ const SettingValidators: { [K in SettingKey]: z.ZodType } = {
   "agents.parallel": z.number().int().min(1, "Au moins 1").max(6, "6 au plus"),
   "agents.models": z.record(z.string(), z.string().regex(/^[a-z0-9.\-[\]]{2,60}$/i, "Nom de modèle invalide")),
   "atelier.timeoutMinutes": z.number().int().min(5).max(180),
+  "prospection.grille": Grille.nullable(),
+  "prospection.places.plafondMensuel": z.number().int().min(0, "0 au moins").max(100_000, "100 000 au plus"),
+  "prospection.maquettes.parallele": z.number().int().min(1, "Au moins 1").max(4, "4 au plus"),
+  "prospection.purge.mois": z.number().int().min(1, "1 mois au moins").max(36, "36 mois au plus"),
 };
 
 /** Fichier demandé sous un dossier racine, ou null s'il en sort (« .. », lien, chemin absolu). */
@@ -184,6 +191,7 @@ export async function buildServer(hub: Hub, options: ServerOptions): Promise<Fas
           },
           jobs: hub.jobs.list({ subject: `site:${req.params.id}`, limit: 60 }),
           activite: hub.events.list({ subject: `site:${req.params.id}`, limit: 40 }),
+          unicite: lireUnicite(hub.sites.dirOf(site.id)),
         };
       });
       api.get("/fabrications", async (req) => {
@@ -260,6 +268,9 @@ export async function buildServer(hub: Hub, options: ServerOptions): Promise<Fas
         if (clean.length) hub.events.append({ type: "settings.updated", message: `Réglages modifiés : ${clean.map(([k]) => k).join(", ")}` });
         return { settings: hub.settings.all() };
       });
+
+      // ── Prospection ──
+      routesProspection(api, hub);
 
       // ── Flux temps réel ──
       api.get("/stream", (req, reply) => {

@@ -47,6 +47,8 @@ export type AskRequest<T extends z.ZodType> = {
   model?: string;
   /** Résumé lisible gardé dans le journal des appels. */
   summary?: string;
+  /** Fournisseur imposé pour cet appel (l'Éclaireur passe par DeepSeek quand il est configuré). */
+  provider?: "claude" | "deepseek";
 };
 
 export type AskResult<T> = { text: string; data: T; costUsd: number | null; model: string; durationMs: number };
@@ -162,8 +164,9 @@ export class AgentService {
 
   /** Appel sans outils (chat / structured) ou avec lecture d'images (vision). */
   async ask<T extends z.ZodType = z.ZodType<string>>(req: AskRequest<T>): Promise<AskResult<T extends z.ZodType<infer O> ? O : string>> {
-    const agent = this.#agent(req.agent);
-    const model = req.model ?? this.modelFor(agent.id);
+    const base = this.#agent(req.agent);
+    const agent = req.provider && req.provider !== base.provider ? { ...base, provider: req.provider } : base;
+    const model = req.model ?? (agent.provider !== base.provider ? (agent.provider === "deepseek" ? "deepseek-chat" : "haiku") : this.modelFor(agent.id));
     const mode = req.imagesDir ? "vision" : req.schema ? "structured" : "chat";
     const jsonSchema = req.schema ? (z.toJSONSchema(req.schema, { target: "draft-7" }) as object) : undefined;
     const started = Date.now();

@@ -19,6 +19,7 @@ const CHAMPS: Record<string, readonly string[]> = {
   zone: ["surtitre", "titre", "intro"],
   appel: ["titre", "texte"],
   devis: ["surtitre", "titre", "intro", "besoins", "boutonEnvoyer"],
+  surmesure: ["surtitre", "titre", "intro", "elements", "boutonAppel", "boutonDevis"],
 };
 
 /** Contrôles du hub avant le schéma du kit : cohérence entre les deux agents et avec le brief. */
@@ -41,6 +42,8 @@ export function verifierCoherence(brief: Brief, design: Design, contenu: Contenu
     if (s.type === "avis" && !brief.entreprise.noteGoogle) da(`sections[${i}] : section « avis » sans note Google dans le brief : la supprimer`);
     if (s.type === "zone" && s.variante === "carte" && !brief.zone.carteDisponible) da(`sections[${i}] : zone « carte » impossible (coordonnées manquantes dans le brief) : utiliser « liste »`);
   });
+  const surMesure = design.sections.filter((s) => s.type === "surmesure").length;
+  if (surMesure !== 1) da(`sections : il faut exactement une section « surmesure » (l'élément sur mesure « ${design.surMesure.element} »), ${surMesure} reçue(s)`);
   if (brief.zone.voisines) {
     if (design.zoneVoisines?.length) da("zoneVoisines : la fiche a déjà ses communes voisines (brief.zone.voisines), ne pas en proposer");
   } else {
@@ -62,48 +65,13 @@ export function verifierCoherence(brief: Brief, design: Design, contenu: Contenu
       if (c.type === "hero" && !c.sousTitre) red(`sections[${i}] (hero) : sousTitre manquant`);
       if (c.type === "devis" && !c.intro) red(`sections[${i}] (devis) : intro manquante (ce qui se passe après l'envoi)`);
       if ((c.type === "services" || c.type === "pourquoi") && !c.items?.length) red(`sections[${i}] (${c.type}) : items manquants`);
-      if (d.nombreItems && c.items && c.items.length !== d.nombreItems) red(`sections[${i}] (${c.type}) : ${d.nombreItems} éléments demandés par le design, ${c.items.length} reçus`);
+      const elements = c.type === "surmesure" ? c.elements : c.items;
+      if (d.nombreItems && elements && elements.length !== d.nombreItems) red(`sections[${i}] (${c.type}) : ${d.nombreItems} éléments demandés par le design, ${elements.length} reçus`);
       if (c.type === "services" && d.variante === "bandes" && c.items && c.items.length !== (d.images?.length ?? 0)) red(`sections[${i}] (services bandes) : un service par image du design (${d.images?.length ?? 0}), ${c.items.length} reçus`);
       if (c.type === "realisations" && c.legendes && c.legendes.length !== (d.images?.length ?? 0)) red(`sections[${i}] (réalisations) : une légende par image (${d.images?.length ?? 0}), ${c.legendes.length} reçues`);
       if (icones?.size) for (const it of c.items ?? []) if (it.icone && !icones.has(it.icone)) red(`sections[${i}] (${c.type}) : icône « ${it.icone} » inconnue de Lucide (ex. zap, plug, lightbulb, shield-check, circuit-board, house, wrench, cable)`);
       if (c.afficherNote && !brief.entreprise.noteGoogle) red(`sections[${i}] : afficherNote sans note Google dans le brief`);
     });
-  }
-  return refus;
-}
-
-type Theme = Design["theme"];
-
-/**
- * Anti-gabarit du thème : deux sites du même métier ne doivent pas se ressembler. Le thème doit surcharger
- * l'accent ou le fond sombre, avec un couple (accent, sombre) différent de chaque site existant, et différer
- * aussi par au moins une police, la signature ou la variante du hero.
- */
-export function verifierDifference(brief: Brief, design: Design, presets: Record<string, { couleurs: Record<string, string>; polices: { titres: string; corps: string }; signature: string }>): Refus[] {
-  const refus: Refus[] = [];
-  const t: Theme = design.theme;
-  const couleurs = t.couleurs ?? {};
-  if (!couleurs.accent && !couleurs.sombre) refus.push({ agent: "directeur-artistique", message: "theme.couleurs : surcharger au moins « accent » ou « sombre » (ajustement de teinte propre à ce site)" });
-  const eff = (preset: string, c: Record<string, string | undefined>, pol: { titres?: string; corps?: string }, sig: string | null | undefined) => {
-    const p = presets[preset];
-    return {
-      accent: (c.accent ?? p?.couleurs.accent ?? "").toLowerCase(),
-      sombre: (c.sombre ?? p?.couleurs.sombre ?? "").toLowerCase(),
-      titres: pol.titres ?? p?.polices.titres,
-      corps: pol.corps ?? p?.polices.corps,
-      signature: sig ?? p?.signature,
-    };
-  };
-  const moi = eff(t.preset, couleurs, t.polices ?? {}, t.signature);
-  const hero = design.sections.find((s) => s.type === "hero")?.variante ?? null;
-  for (const autre of brief.sitesMemeMetier) {
-    const o = eff(autre.preset, autre.couleurs, autre.polices, autre.signature);
-    if (o.accent === moi.accent && o.sombre === moi.sombre) {
-      refus.push({ agent: "directeur-artistique", message: `theme : même couple accent ${moi.accent} / sombre ${moi.sombre} que ${autre.origine} : changer la teinte` });
-    }
-    if (o.titres === moi.titres && o.corps === moi.corps && o.signature === moi.signature && autre.heroVariante === hero) {
-      refus.push({ agent: "directeur-artistique", message: `theme : mêmes polices (${moi.titres}/${moi.corps}), même signature (${moi.signature}) et même hero (${hero}) que ${autre.origine} : changer au moins l'un des trois` });
-    }
   }
   return refus;
 }
@@ -130,7 +98,12 @@ export function assembler(brief: Brief, design: Design, contenu: Contenu): Recor
       });
     }
     if (d.type === "realisations") contenuSection.images = (d.images ?? []).map((k, j) => ({ image: k, ...(c.legendes?.[j] ? { legende: c.legendes[j] } : {}) }));
-    return { type: d.type, variante: d.variante, contenu: contenuSection };
+    if (d.type === "surmesure") {
+      if (c.elements?.length) contenuSection.elements = c.elements;
+      if (d.image) contenuSection.image = d.image;
+      return { type: d.type, variante: "composant", composant: design.surMesure.composant, ...(d.fond ? { fond: d.fond } : {}), contenu: contenuSection };
+    }
+    return { type: d.type, variante: d.variante, ...(d.fond && d.type !== "hero" ? { fond: d.fond } : {}), contenu: contenuSection };
   });
 
   const siege = brief.zone.siege.valeur;
@@ -186,10 +159,10 @@ export function attribuer(erreur: string, site: Record<string, unknown>): Refus[
   const m = /^sections(?:\[(\d+)\])?(.*)$/.exec(chemin);
   if (m) {
     const reste = m[2] ?? "";
-    if (/\.(variante|type)$/.test(reste) || reste === "") return "directeur-artistique";
+    if (/\.(variante|type|composant|fond)$/.test(reste) || reste === "") return "directeur-artistique";
     if (/\.contenu(\.items(\[\d+\])?)?\.image$|\.contenu\.images|image/.test(reste)) return "directeur-artistique";
     if (/demande une image/.test(erreur)) return "directeur-artistique";
-    if (/la variante « bandes » accepte 4 services/.test(erreur)) return "directeur-artistique";
+    if (/la variante « (bandes|diptyque) » accepte/.test(erreur)) return "directeur-artistique";
     return "redacteur";
   }
   void site;

@@ -1,0 +1,58 @@
+---
+/**
+ * Services « index » : sommaire éditorial sans image. Chaque prestation : titre en grand, points de conduite vers son
+ * numéro, texte et points concrets dessous, filets fins. Deux colonnes au bureau. Pour 3 à 8 prestations bien écrites.
+ */
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, ancreDevis, libelleDevis } from "../lib/site.ts";
+import Section from "../components/Section.astro";
+import TitreSection from "../components/TitreSection.astro";
+import Icone from "../components/Icone.astro";
+interface Props {
+  section: SectionDe<"services">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const sombre = fond === "sombre";
+---
+
+<Section id={id} fond={fond}>
+  <div class="conteneur">
+    <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between md:gap-12">
+      <TitreSection id={id} surtitre={c.surtitre} titre={c.titre} intro={c.intro} />
+      <a href={ancreDevis} class="lien inline-flex min-h-11 shrink-0 items-center gap-2 md:mb-1">
+        {libelleDevis}
+        <Icone nom="arrow-right" class="size-4" />
+      </a>
+    </div>
+    <ol class:list={["mt-12 grid gap-x-16 border-t md:mt-16 lg:grid-cols-2", sombre ? "border-white/15" : "border-trait"]}>
+      {
+        c.items.map((it, i) => (
+          <li class:list={["border-b py-7 md:py-9", sombre ? "border-white/15" : "border-trait"]}>
+            <div class="flex items-baseline gap-4">
+              <h3 class="text-[1.5rem] leading-tight md:text-[1.75rem]">{it.titre}</h3>
+              <span aria-hidden="true" class="min-w-6 flex-1 translate-y-[-0.2em] border-b-2 border-dotted border-current opacity-25" />
+              <span aria-hidden="true" class="font-titres text-lg texte-accent tabular-nums">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+            </div>
+            <p class="texte-doux mt-3 max-w-prose leading-relaxed">{it.texte}</p>
+            {it.points && it.points.length > 0 && (
+              <ul class="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-[0.9375rem]">
+                {it.points.map((p) => (
+                  <li class="flex gap-2">
+                    <Icone nom="check" class="mt-[0.2rem] size-4 shrink-0 texte-accent" trait={2.25} />
+                    {p}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</Section>

@@ -10,6 +10,7 @@ import type { SiteService } from "../domain/sites.ts";
 import type { Job, JobContext, JobQueue } from "../jobs/job-queue.ts";
 import { prerequisMaquette } from "./brief.ts";
 import type { KitRunner } from "./kit.ts";
+import type { Registre } from "./registre.ts";
 import type { Consigne, Issue, Recette } from "./recette.ts";
 
 export const JOB_ETAPE = "atelier.etape";
@@ -104,6 +105,7 @@ export class Atelier {
   readonly #recettes: Map<string, Recette>;
   readonly #agents: Pick<AgentService, "ask" | "atelier">;
   readonly #kit: KitRunner;
+  readonly #registre: Registre;
   readonly #sitesDir: string;
   readonly #now: () => Date;
   #unsubscribe: (() => void) | null = null;
@@ -118,6 +120,7 @@ export class Atelier {
     recettes: Recette[];
     agents: Pick<AgentService, "ask" | "atelier">;
     kit: KitRunner;
+    registre: Registre;
     sitesDir: string;
     now?: () => Date;
   }) {
@@ -129,6 +132,7 @@ export class Atelier {
     this.#recettes = new Map(deps.recettes.map((r) => [r.id, r]));
     this.#agents = deps.agents;
     this.#kit = deps.kit;
+    this.#registre = deps.registre;
     this.#sitesDir = deps.sitesDir;
     this.#now = deps.now ?? (() => new Date());
     this.#jobs.register(JOB_ETAPE, { run: (ctx) => this.#executer(ctx) });
@@ -361,6 +365,7 @@ export class Atelier {
       refaire: f.refaire,
       agents: this.#agents,
       kit: this.#kit,
+      registre: this.#registre,
       job: ctx,
       now: this.#now,
     });
@@ -415,7 +420,7 @@ export class Atelier {
         const deja = g.renvois.comptes[cle] ?? 0;
         const cible = recette.etapes[issue.vers];
         if (!cible) return this.#arreter(g, "technique", `Renvoi vers une étape inconnue : ${issue.vers}`);
-        if (deja >= 1) {
+        if (deja >= (issue.max ?? 1)) {
           return this.#arreter(g, "schema", `${cible.label} : refus encore présent après un renvoi. Message exact : ${issue.message}`);
         }
         this.#maj(g.id, { renvois_json: JSON.stringify({ comptes: { ...g.renvois.comptes, [cle]: deja + 1 }, messages: { ...g.renvois.messages, [issue.vers]: issue.message } }) });
@@ -462,6 +467,8 @@ export class Atelier {
       const moyenne = visuel ? Number((visuel.sortie as { moyenne: number }).moyenne) : null;
       this.#sites.update(f.siteId, { statut: "a_valider", ...(moyenne ? { qualiteNote: Math.round((moyenne / 5) * 100) } : {}) });
       this.#events.append({ type: "atelier.a_valider", subject: `site:${f.siteId}`, message: `Maquette de ${site.companyName} prête à valider (tous les contrôles passent)`, data: { fabricationId: f.id } });
+      // Fabrication réussie : le site entre au registre (empreinte lue par les prochaines fabrications).
+      this.#registre.inscrireEnFond(f.siteId);
       return;
     }
     if (f.tour >= recette.correction.toursMax) {

@@ -61,19 +61,71 @@ export function motif(sig: Signature, couleur: string, opacite = 0.14): { image:
         image: svgUrl(14, 14, `<path d='M-3.5 3.5L3.5 -3.5M0 14L14 0M10.5 17.5L17.5 10.5' ${s} stroke-width='1'/>`),
         taille: "14px 14px",
       };
+    case "cotes":
+      // Lignes de cote d'un plan : traits fins, flèches et repères de mesure.
+      return {
+        image: svgUrl(
+          160,
+          80,
+          `<path d='M8 20H72M8 16V24M72 16V24M8 20l5-2.5v5zM72 20l-5-2.5v5zM96 60H152M96 56V64M152 56V64M96 60l5-2.5v5zM152 60l-5-2.5v5z' ${s} stroke-width='1'/>`,
+        ),
+        taille: "160px 80px",
+      };
+    case "points":
+      // Trame de points régulière (similigravure).
+      return {
+        image: svgUrl(16, 16, `<circle cx='4' cy='4' r='1.1' fill='${couleur}' fill-opacity='${Math.min(opacite * 1.6, 1)}'/><circle cx='12' cy='12' r='1.1' fill='${couleur}' fill-opacity='${Math.min(opacite * 1.6, 1)}'/>`),
+        taille: "16px 16px",
+      };
+    case "chevrons":
+      return {
+        image: svgUrl(40, 20, `<path d='M0 15L10 5L20 15L30 5L40 15' ${s} stroke-width='1.25' stroke-linejoin='round'/>`),
+        taille: "40px 20px",
+      };
+    case "briques":
+      // Appareillage en panneresse (joints décalés d'une demi-brique).
+      return {
+        image: svgUrl(48, 24, `<path d='M0 .5H48M0 12.5H48M.5 0V12M24.5 12V24' ${s} stroke-width='1'/>`),
+        taille: "48px 24px",
+      };
+    case "rayures":
+      return {
+        // Rayures larges : opacité divisée par deux, sinon le motif domine la section.
+        image: svgUrl(28, 28, `<path d='M-7 7L7 -7M0 28L28 0M21 35L35 21' stroke='${couleur}' stroke-opacity='${opacite * 0.45}' stroke-width='5'/>`),
+        taille: "28px 28px",
+      };
+    case "topo":
+      // Courbes de niveau d'une carte topographique.
+      return {
+        image: svgUrl(
+          220,
+          220,
+          `<path d='M20 110C20 60 70 30 120 40S200 90 190 140S120 200 80 185S20 150 20 110ZM50 110C52 78 84 62 118 68S172 98 165 132S118 172 90 162S48 138 50 110ZM80 112C82 96 98 88 116 92S142 106 138 124S116 144 102 140S78 128 80 112Z' ${s} stroke-width='1'/>`,
+        ),
+        taille: "220px 220px",
+      };
   }
 }
 
-/** Traitement du cadre des images mises en avant (hero scindé, bandes, manifeste). */
-export function cadre(sig: Signature): "equerres" | "decale" | "arche" | "simple" {
+export type TypeCadre = "equerres" | "decale" | "arche" | "simple" | "lisere" | "coin";
+
+/** Traitement du cadre des images mises en avant (hero scindé, bandes, manifeste) selon la signature. */
+export function cadre(sig: Signature): TypeCadre {
   switch (sig) {
     case "faisceau":
+    case "cotes":
       return "equerres";
     case "tuiles":
       return "arche";
     case "veinage":
     case "aplat":
       return "decale";
+    case "chevrons":
+    case "rayures":
+      return "lisere";
+    case "briques":
+    case "points":
+      return "coin";
     default:
       return "simple";
   }

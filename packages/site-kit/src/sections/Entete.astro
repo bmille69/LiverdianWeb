@@ -3,6 +3,8 @@
  * En-tête collant. Variantes :
  * - « simple » : une barre (logo, menu, téléphone, bouton Devis).
  * - « double » : + bandeau d'informations au-dessus (adresse, horaires, note) sur tablette/bureau.
+ * - « centre » : au bureau, logo centré entre le téléphone (à gauche) et le bouton Devis (à droite), menu centré
+ *   sur une seconde ligne fine. Sous 1024 px, identique au « simple ».
  * Mobile : logo, bouton d'appel (icône + « Appeler ») et menu ; le menu déroulant reprend téléphone et devis.
  */
 import { site, tel, liensMenu, ancreDevis, libelleDevis } from "../lib/site.ts";
@@ -11,6 +13,7 @@ import Icone from "../components/Icone.astro";
 import NoteGoogle from "../components/NoteGoogle.astro";
 import Logo from "./Logo.astro";
 const v = site.entete.variante;
+const centre = v === "centre";
 const horaires = horairesFr(site.entreprise.horaires);
 const e = site.entreprise;
 ---
@@ -37,9 +40,34 @@ const e = site.entreprise;
   )
 }
 <header class="sticky top-0 z-40 border-b border-trait bg-fond/95 backdrop-blur-sm supports-[backdrop-filter]:bg-fond/90">
-  <div class="conteneur flex h-[4.5rem] items-center justify-between gap-4">
+  {
+    centre && (
+      <div class="hidden lg:block">
+        <div class="conteneur grid h-[4.25rem] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-6">
+          <a href={tel.lien} class="inline-flex items-center gap-2 justify-self-start rounded-ui px-3 py-2.5 font-semibold text-encre no-underline hover:bg-teinte">
+            <Icone nom="phone" class="size-[1.125rem] text-accent-texte" />
+            <span class="tabular-nums">{tel.affiche}</span>
+          </a>
+          <Logo class="min-w-0" />
+          <a href={ancreDevis} class="btn btn-primaire min-h-11! justify-self-end px-5!">{libelleDevis}</a>
+        </div>
+        <nav aria-label="Navigation principale" class="border-t border-trait/70">
+          <ul class="conteneur flex min-h-11 items-center justify-center gap-2">
+            {liensMenu.map((l) => (
+              <li>
+                <a href={l.href} class="inline-flex min-h-11 items-center px-3 text-[0.875rem] font-semibold tracking-[0.08em] text-encre uppercase no-underline decoration-2 underline-offset-[0.5em] hover:underline">
+                  {l.libelle}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    )
+  }
+  <div class:list={["conteneur flex h-[4.5rem] items-center justify-between gap-4", centre && "lg:hidden"]}>
     <Logo class="min-w-0" />
-    <nav aria-label="Navigation principale" class="hidden lg:block">
+    <nav aria-label="Navigation principale" class:list={["hidden", !centre && "lg:block"]}>
       <ul class="flex items-center gap-1">
         {
           liensMenu.map((l) => (

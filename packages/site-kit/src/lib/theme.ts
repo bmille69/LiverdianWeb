@@ -2,8 +2,9 @@
  * Thèmes : préréglages par métier, fusion avec les surcharges du site, contrôle des contrastes (WCAG AA)
  * et conversion en variables CSS lues par Tailwind (voir src/styles/global.css).
  */
-import type { Couleurs, Police, Preset, Signature, Theme } from "../schema.ts";
-import { POLICES_DEF, REPLI_SYSTEME } from "./polices.ts";
+import { MISE, type Couleurs, type Mise, type Police, type Preset, type Signature, type Theme } from "../schema.ts";
+import { PAIRES_DEF, POLICES_DEF, REPLI_SYSTEME } from "./polices.ts";
+import { genererPalette } from "./palette.ts";
 
 export type ThemeResolu = {
   preset: Preset;
@@ -11,13 +12,14 @@ export type ThemeResolu = {
   polices: { titres: Police; corps: Police };
   rayon: number;
   signature: Signature;
+  mise: Mise;
 };
 
 /**
  * Préréglages. Chaque palette suit `skills/design/design-par-metier` :
  * neutres teintés vers la marque, un accent réservé aux actions, un fond sombre pour rythmer.
  */
-export const PRESETS_DEF: Record<Preset, Omit<ThemeResolu, "preset"> & { description: string }> = {
+export const PRESETS_DEF: Record<Preset, Omit<ThemeResolu, "preset" | "mise"> & { description: string }> = {
   electricien: {
     description: "Bleu nuit et anthracite, accent ambre. Grotesque technique. Précis, rassurant.",
     couleurs: {
@@ -152,14 +154,26 @@ export const PRESETS_DEF: Record<Preset, Omit<ThemeResolu, "preset"> & { descrip
   },
 };
 
+/** Mise en page par défaut : la première valeur de chaque axe. */
+export const MISE_DEFAUT = Object.fromEntries(Object.entries(MISE).map(([k, v]) => [k, v[0]])) as Mise;
+
+/**
+ * Thème final : préréglage du métier, puis palette générée (si le site en a une), puis surcharges ponctuelles.
+ * Polices : titres/corps explicites, sinon la paire choisie, sinon celles du préréglage.
+ */
 export function resoudreTheme(t: Theme): ThemeResolu {
   const base = PRESETS_DEF[t.preset];
+  const paire = t.polices?.paire ? PAIRES_DEF[t.polices.paire] : null;
   return {
     preset: t.preset,
-    couleurs: { ...base.couleurs, ...(t.couleurs ?? {}) },
-    polices: { titres: t.polices?.titres ?? base.polices.titres, corps: t.polices?.corps ?? base.polices.corps },
+    couleurs: { ...base.couleurs, ...(t.palette ? genererPalette(t.palette) : {}), ...(t.couleurs ?? {}) },
+    polices: {
+      titres: t.polices?.titres ?? paire?.titres ?? base.polices.titres,
+      corps: t.polices?.corps ?? paire?.corps ?? base.polices.corps,
+    },
     rayon: t.rayon ?? base.rayon,
     signature: t.signature ?? base.signature,
+    mise: { ...MISE_DEFAUT, ...(t.mise ?? {}) } as Mise,
   };
 }
 
@@ -220,6 +234,27 @@ export function variablesCss(t: ThemeResolu): string {
     `--approche-titre:${pt.approche}`,
     `--rayon:${t.rayon}px`,
     `--rayon-l:${t.rayon === 0 ? 0 : Math.min(t.rayon * 2, 24)}px`,
+    ...variablesMise(t.mise),
   );
   return `:root{${lignes.join(";")}}`;
+}
+
+/** Échelle typographique : multiplicateurs du H1 (mobile, bureau) et du H2. */
+const ECHELLES: Record<Mise["echelle"], { h1m: number; h1: number; h2: number }> = {
+  sobre: { h1m: 0.9, h1: 0.8, h2: 0.86 },
+  equilibree: { h1m: 1, h1: 1, h2: 1 },
+  affirmee: { h1m: 1.06, h1: 1.14, h2: 1.1 },
+  monumentale: { h1m: 1.1, h1: 1.32, h2: 1.2 },
+};
+/** Respiration verticale des sections (rem) : mobile, tablette, bureau. */
+const DENSITES: Record<Mise["densite"], [number, number, number]> = {
+  compacte: [3.5, 4.75, 6],
+  standard: [4, 6, 8],
+  aeree: [5, 7.5, 10],
+};
+
+function variablesMise(m: Mise): string[] {
+  const e = ECHELLES[m.echelle];
+  const d = DENSITES[m.densite];
+  return [`--k-h1m:${e.h1m}`, `--k-h1:${e.h1}`, `--k-h2:${e.h2}`, `--section-s:${d[0]}rem`, `--section-m:${d[1]}rem`, `--section-l:${d[2]}rem`];
 }

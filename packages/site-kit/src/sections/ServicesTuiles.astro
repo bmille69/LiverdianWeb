@@ -1,0 +1,66 @@
+---
+/**
+ * Services « tuiles » : grille de tuiles (3 colonnes bureau, 2 tablette, 1 mobile), grande icône dans un carré d'accent,
+ * titre, texte, points éventuels. Toutes les tuiles ont la même largeur : une tuile élargie restait à moitié vide
+ * (constaté en revue visuelle). Pour 3 à 8 prestations ; convient sur fond teinté.
+ */
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, ancreDevis, libelleDevis } from "../lib/site.ts";
+import Section from "../components/Section.astro";
+import TitreSection from "../components/TitreSection.astro";
+import Icone from "../components/Icone.astro";
+interface Props {
+  section: SectionDe<"services">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const sombre = fond === "sombre";
+const n = c.items.length;
+// 4 prestations : 2 × 2 au bureau plutôt qu'une rangée de 3 et une tuile seule.
+const colonnes = n === 4 ? "lg:grid-cols-2" : "lg:grid-cols-3";
+---
+
+<Section id={id} fond={fond} texture>
+  <div class="conteneur">
+    <TitreSection id={id} surtitre={c.surtitre} titre={c.titre} intro={c.intro} />
+    <ul class:list={["mt-12 grid gap-4 sm:gap-5 md:mt-16 md:grid-cols-2", colonnes]}>
+      {
+        c.items.map((it) => {
+          return (
+            <li
+              class:list={[
+                "flex flex-col rounded-ui-l border p-6 sm:p-8",
+                sombre ? "border-white/10 bg-sombre-surface" : "border-trait bg-surface",
+              ]}
+            >
+              <span class="grid size-14 shrink-0 place-items-center rounded-ui bg-accent text-sur-accent sm:size-16">
+                <Icone nom={it.icone ?? "check"} class="size-7 sm:size-8" />
+              </span>
+              <div class="mt-6">
+                <h3 class="text-xl sm:text-[1.375rem]">{it.titre}</h3>
+                <p class="texte-doux mt-3 leading-relaxed">{it.texte}</p>
+                {it.points && it.points.length > 0 && (
+                  <ul class="mt-5 space-y-2 text-[0.9375rem]">
+                    {it.points.map((p) => (
+                      <li class="flex gap-2.5">
+                        <Icone nom="check" class="mt-[0.2rem] size-4 shrink-0 texte-accent" trait={2.25} />
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </li>
+          );
+        })
+      }
+    </ul>
+    <a href={ancreDevis} class="lien mt-10 inline-flex min-h-11 items-center gap-2">
+      {libelleDevis}
+      <Icone nom="arrow-right" class="size-4" />
+    </a>
+  </div>
+</Section>

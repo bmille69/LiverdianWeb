@@ -1,8 +1,7 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { Company } from "../domain/companies.ts";
 import { communesProches, trouverAvecCodePostal, trouverCommune } from "./communes.ts";
 import { activiteDe, type ActiviteNaf } from "./naf.ts";
+import { seriePhoto } from "./unicite.ts";
 
 /**
  * Étape 1 de la recette : le brief, écrit par du code à partir de la fiche entreprise.
@@ -45,9 +44,19 @@ export type Brief = {
     carteDisponible: boolean;
   };
   demo: { actif: true; agence: string; dateSuppression: Fait<string> };
-  banqueImages: { fichier: string; description: string; orientation: string; hero: boolean; largeur: number; hauteur: number; candidate: boolean }[];
-  /** Thèmes et variantes déjà utilisés par des sites du même métier : à ne pas reproduire. */
-  sitesMemeMetier: { origine: string; preset: string; couleurs: Record<string, string>; polices: { titres?: string; corps?: string }; signature: string | null; heroVariante: string | null; variantes: string[] }[];
+  banqueImages: {
+    fichier: string;
+    description: string;
+    orientation: string;
+    hero: boolean;
+    largeur: number;
+    hauteur: number;
+    candidate: boolean;
+    /** Sites qui emploient déjà cette photo (registre), avec leur distance. */
+    usage?: { site: string; commune: string; km: number | null; hero: boolean; metier: string }[];
+    /** Raison pour laquelle la photo ne peut plus servir de hero à ce site (déjà en hero dans la zone ou le métier). */
+    exclueHero?: string;
+  }[];
   regles: string[];
 };
 
@@ -108,47 +117,6 @@ export function lireHoraires(h: Partial<Record<string, string>>): { jours: strin
   });
 }
 
-/** Thème et variantes d'un site.json existant (exemple du kit ou site déjà fabriqué). */
-function signatureDe(origine: string, site: Record<string, unknown>) {
-  const theme = (site.theme ?? {}) as { preset?: string; couleurs?: Record<string, string>; polices?: { titres?: string; corps?: string }; signature?: string };
-  const sections = (Array.isArray(site.sections) ? site.sections : []) as { type?: string; variante?: string }[];
-  return {
-    origine,
-    preset: theme.preset ?? "?",
-    couleurs: theme.couleurs ?? {},
-    polices: theme.polices ?? {},
-    signature: theme.signature ?? null,
-    heroVariante: sections.find((s) => s.type === "hero")?.variante ?? null,
-    variantes: sections.map((s) => `${s.type}:${s.variante}`),
-  };
-}
-
-export function sitesDuMemeMetier(opts: { kitRoot: string; sitesDir: string; exceptSiteId: string; metier: string }): Brief["sitesMemeMetier"] {
-  const out: Brief["sitesMemeMetier"] = [];
-  const lire = (file: string) => {
-    try {
-      return JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>;
-    } catch {
-      return null;
-    }
-  };
-  const exemples = join(opts.kitRoot, "examples");
-  if (existsSync(exemples)) {
-    for (const d of readdirSync(exemples)) {
-      const s = lire(join(exemples, d, "site.json"));
-      if (s && (s.entreprise as { metier?: string } | undefined)?.metier === opts.metier) out.push(signatureDe(`exemple du kit « ${d} »`, s));
-    }
-  }
-  if (existsSync(opts.sitesDir)) {
-    for (const d of readdirSync(opts.sitesDir)) {
-      if (d === opts.exceptSiteId) continue;
-      const s = lire(join(opts.sitesDir, d, "src", "data", "site.json"));
-      if (s && (s.entreprise as { metier?: string } | undefined)?.metier === opts.metier) out.push(signatureDe(`site ${d}`, s));
-    }
-  }
-  return out;
-}
-
 const SRC = (s: string | undefined) => s ?? "saisie";
 
 export function buildBrief(input: {
@@ -157,7 +125,10 @@ export function buildBrief(input: {
   recette: string;
   now: Date;
   credits: { fichier: string; metier: string; description: string; orientation: string; hero: boolean; largeur: number; hauteur: number }[];
-  sitesMemeMetier: Brief["sitesMemeMetier"];
+  /** Usage des photos par les autres sites (registre) ; une photo déjà en hero dans la zone ou le métier est exclue du hero. */
+  usagePhotos?: Map<string, { site: string; commune: string; km: number | null; hero: boolean; metier: string }[]>;
+  /** Rayon de la zone (km) pour l'exclusion des photos de hero. */
+  zoneKm?: number;
 }): Brief {
   const c = input.company;
   const pre = prerequisMaquette(c);
@@ -233,16 +204,25 @@ export function buildBrief(input: {
       carteDisponible,
     },
     demo: { actif: true, agence: "Liverdian", dateSuppression: { valeur: dateSuppression(input.now), source: "hub : date de fabrication + 30 jours" } },
-    banqueImages: input.credits.map((k) => ({
-      fichier: `stock/${k.fichier}`,
-      description: k.description,
-      orientation: k.orientation,
-      hero: k.hero,
-      largeur: k.largeur,
-      hauteur: k.hauteur,
-      candidate: dossiers.has(k.fichier.split("/")[0] ?? ""),
-    })),
-    sitesMemeMetier: input.sitesMemeMetier,
+    banqueImages: input.credits.map((k) => {
+      const fichier = `stock/${k.fichier}`;
+      const usage = input.usagePhotos?.get(fichier) ?? [];
+      const zoneKm = input.zoneKm ?? 30;
+      // Une photo de la même série (même sujet, autre cadrage) déjà en hero compte comme la même photo.
+      const serie = [...(input.usagePhotos?.entries() ?? [])].filter(([f]) => seriePhoto(f) === seriePhoto(fichier)).flatMap(([, u]) => u);
+      const conflit = serie.find((u) => u.hero && (u.metier === a.metier || (u.km !== null && u.km <= zoneKm)));
+      return {
+        fichier,
+        description: k.description,
+        orientation: k.orientation,
+        hero: k.hero && !conflit,
+        largeur: k.largeur,
+        hauteur: k.hauteur,
+        candidate: dossiers.has(k.fichier.split("/")[0] ?? ""),
+        ...(usage.length ? { usage } : {}),
+        ...(conflit ? { exclueHero: `déjà en hero chez ${conflit.site} (${conflit.commune}${conflit.km !== null ? `, ${conflit.km} km` : ""})` } : {}),
+      };
+    }),
     regles: [
       "Rien d'inventé : un fait qui n'est pas dans ce brief n'apparaît pas sur le site.",
       "Les prestations viennent de activite.prestationsPlausibles (couvertes par le code NAF) : en choisir, ne pas en ajouter d'autres.",

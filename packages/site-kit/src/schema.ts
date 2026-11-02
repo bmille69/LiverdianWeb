@@ -107,18 +107,91 @@ export const PRESETS = ["electricien", "plombier", "chauffagiste", "couvreur", "
 export const POLICES = [
   "archivo",
   "barlow-semi-condensed",
+  "bitter",
   "bricolage-grotesque",
+  "dm-sans",
   "dm-serif-display",
+  "figtree",
   "fraunces",
+  "hanken-grotesk",
+  "instrument-sans",
+  "instrument-serif",
   "inter",
+  "libre-franklin",
+  "literata",
   "manrope",
+  "newsreader",
+  "oswald",
   "plus-jakarta-sans",
+  "public-sans",
+  "red-hat-display",
+  "roboto-slab",
   "schibsted-grotesk",
+  "sora",
   "source-sans-3",
   "space-grotesk",
   "work-sans",
+  "young-serif",
 ] as const;
-export const SIGNATURES = ["faisceau", "onde", "isobares", "tuiles", "veinage", "aplat"] as const;
+/** Paires de polices éprouvées (titres + corps), classées par caractère dans lib/polices.ts. */
+export const PAIRES_POLICES = [
+  "atelier-technique",
+  "plan-de-coupe",
+  "chantier-net",
+  "grotesque-franche",
+  "geometrie-douce",
+  "contemporain-clair",
+  "industriel-condense",
+  "affiche-robuste",
+  "signaletique",
+  "editorial-serif",
+  "maison-de-famille",
+  "gazette-locale",
+  "artisan-d-art",
+  "bois-et-papier",
+  "elegance-sobre",
+  "patrimoine",
+  "slab-robuste",
+  "slab-editorial",
+  "rondeur-accueillante",
+  "precision-suisse",
+  "caractere-fort",
+  "classique-moderne",
+] as const;
+export const SIGNATURES = ["faisceau", "onde", "isobares", "tuiles", "veinage", "aplat", "cotes", "points", "chevrons", "briques", "rayures", "topo"] as const;
+
+/**
+ * Paramètres de mise en page, indépendants du thème : le Directeur artistique les compose librement.
+ * Le premier de chaque liste est la valeur par défaut.
+ */
+export const MISE = {
+  /** Échelle typographique des titres (H1 du hero et H2 de section). */
+  echelle: ["equilibree", "sobre", "affirmee", "monumentale"],
+  /** Respiration verticale des sections. */
+  densite: ["standard", "compacte", "aeree"],
+  /** Traitement des photos. */
+  images: ["naturel", "franc", "passe-partout", "duotone", "contraste"],
+  /** Forme du cadre des images mises en avant ; « auto » suit la signature. */
+  cadre: ["auto", "simple", "equerres", "decale", "arche", "lisere", "coin"],
+  /** Style des boutons. */
+  boutons: ["plein", "pilule", "marque", "carre"],
+  /** Rythme des fonds de section. */
+  rythme: ["alterne", "contraste", "clair", "chaud"],
+  /** Casse des titres. */
+  titres: ["normale", "capitales"],
+  /** Style des surtitres de section. */
+  surtitres: ["marqueur", "filet", "pastille", "simple"],
+} as const;
+export type Mise = { [K in keyof typeof MISE]: (typeof MISE)[K][number] };
+
+/** Palette générée par le code à partir de quelques intentions (voir lib/palette.ts) ; contrastes AA garantis. */
+export const PALETTE = {
+  vivacite: ["franche", "sourde", "vive"],
+  accentTon: ["clair", "fonce"],
+  neutres: ["teintes", "gris", "colores"],
+  fond: ["casse", "blanc", "teinte"],
+  sombre: ["profond", "nuit", "colore"],
+} as const;
 
 const couleurHex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "couleur attendue au format #RRGGBB");
 export const COULEURS = [
@@ -141,14 +214,42 @@ export const couleursSchema = z.object(Object.fromEntries(COULEURS.map((c) => [c
   [K in (typeof COULEURS)[number]]: typeof couleurHex;
 });
 
+const teinteHue = z.number().int().min(0).max(359);
+
+export const paletteSchema = z.object({
+  /** Teinte (0–359°, cercle OKLCH) des neutres et du fond sombre. */
+  teinte: teinteHue,
+  /** Teinte de l'accent (boutons, liens, marqueurs). */
+  accent: teinteHue,
+  vivacite: z.enum(PALETTE.vivacite).optional(),
+  /** « clair » : accent lumineux avec texte foncé dessus ; « fonce » : accent profond avec texte blanc. */
+  accentTon: z.enum(PALETTE.accentTon).optional(),
+  neutres: z.enum(PALETTE.neutres).optional(),
+  fond: z.enum(PALETTE.fond).optional(),
+  sombre: z.enum(PALETTE.sombre).optional(),
+});
+
+export const miseSchema = z.object(
+  Object.fromEntries(Object.entries(MISE).map(([k, v]) => [k, z.enum(v as unknown as [string, ...string[]]).optional()])) as {
+    [K in keyof typeof MISE]: z.ZodOptional<z.ZodEnum<{ [V in (typeof MISE)[K][number]]: V }>>;
+  },
+);
+
 export const themeSchema = z.object({
+  /** Caractère de départ (métier) ; la palette générée et les surcharges passent par-dessus. */
   preset: z.enum(PRESETS),
-  /** Surcharges ponctuelles du préréglage (ne jamais livrer deux sites du même métier avec la même teinte). */
+  /** Palette propre au site, calculée par le code (teinte, accent, contrastes AA vérifiés). */
+  palette: paletteSchema.optional(),
+  /** Surcharges ponctuelles, appliquées en dernier (toujours vérifiées). */
   couleurs: couleursSchema.partial().optional(),
-  polices: z.object({ titres: z.enum(POLICES).optional(), corps: z.enum(POLICES).optional() }).optional(),
+  polices: z
+    .object({ paire: z.enum(PAIRES_POLICES).optional(), titres: z.enum(POLICES).optional(), corps: z.enum(POLICES).optional() })
+    .optional(),
   /** Rayon des coins en px, appliqué partout (boutons, cartes, images). */
   rayon: z.union([z.literal(0), z.literal(2), z.literal(4), z.literal(6), z.literal(8), z.literal(12), z.literal(16)]).optional(),
   signature: z.enum(SIGNATURES).optional(),
+  /** Mise en page (échelle, densité, images, boutons, rythme…), indépendante des couleurs. */
+  mise: miseSchema.optional(),
 });
 
 // ─── Images ──────────────────────────────────────────────────────────────────
@@ -164,7 +265,24 @@ export const imageSchema = z.object({
 
 // ─── Sections ────────────────────────────────────────────────────────────────
 
+/** Variantes de chaque famille de section (un composant `src/sections/<Famille><Variante>.astro` par variante). */
+export const VARIANTES = {
+  hero: ["photo", "typo", "scinde", "panorama", "encart"],
+  services: ["cartes", "liste", "bandes", "index", "tuiles"],
+  pourquoi: ["colonnes", "manifeste", "etapes", "encadre"],
+  realisations: ["mosaique", "grille", "bande", "diptyque"],
+  avis: ["badge", "bandeau"],
+  zone: ["carte", "liste", "tableau", "bandeau"],
+  appel: ["bande", "carte"],
+  devis: ["scinde", "encadre", "plein", "appel"],
+} as const;
+export const ENTETES = ["simple", "double", "centre"] as const;
+export const PIEDS = ["complet", "sobre", "signature"] as const;
+export const FONDS = ["clair", "surface", "teinte", "sombre"] as const;
+
 const enTete = {
+  /** Fond souhaité (sinon celui de la variante, selon le rythme) ; deux fonds identiques ne se suivent jamais. */
+  fond: z.enum(FONDS).optional(),
   /** Identifiant d'ancre (#services). Par défaut : le type de section. */
   ancre: z.string().regex(/^[a-z][a-z0-9-]*$/).optional(),
   /** Libellé dans le menu ; `false` pour ne pas apparaître dans le menu. */
@@ -176,7 +294,7 @@ const icone = z.string().regex(/^[a-z0-9-]+$/, "nom d'icône Lucide (ex. « zap 
 
 export const heroSchema = z.object({
   type: z.literal("hero"),
-  variante: z.enum(["photo", "typo", "scinde"]),
+  variante: z.enum(VARIANTES.hero),
   contenu: z.object({
     surtitre: texteCourt(60).optional(),
     /** Le H1 unique de la page : métier + commune (4 à 9 mots). */
@@ -198,7 +316,7 @@ export const heroSchema = z.object({
 
 export const servicesSchema = z.object({
   type: z.literal("services"),
-  variante: z.enum(["cartes", "liste", "bandes"]),
+  variante: z.enum(VARIANTES.services),
   ...enTete,
   contenu: z.object({
     surtitre: texteCourt(48).optional(),
@@ -222,7 +340,7 @@ export const servicesSchema = z.object({
 
 export const pourquoiSchema = z.object({
   type: z.literal("pourquoi"),
-  variante: z.enum(["colonnes", "manifeste"]),
+  variante: z.enum(VARIANTES.pourquoi),
   ...enTete,
   contenu: z.object({
     surtitre: texteCourt(48).optional(),
@@ -235,7 +353,7 @@ export const pourquoiSchema = z.object({
 
 export const realisationsSchema = z.object({
   type: z.literal("realisations"),
-  variante: z.enum(["mosaique", "grille"]),
+  variante: z.enum(VARIANTES.realisations),
   ...enTete,
   contenu: z.object({
     surtitre: texteCourt(48).optional(),
@@ -247,7 +365,7 @@ export const realisationsSchema = z.object({
 
 export const avisSchema = z.object({
   type: z.literal("avis"),
-  variante: z.enum(["badge", "bandeau"]),
+  variante: z.enum(VARIANTES.avis),
   ...enTete,
   contenu: z.object({
     surtitre: texteCourt(48).optional(),
@@ -258,7 +376,7 @@ export const avisSchema = z.object({
 
 export const zoneSectionSchema = z.object({
   type: z.literal("zone"),
-  variante: z.enum(["carte", "liste"]),
+  variante: z.enum(VARIANTES.zone),
   ...enTete,
   contenu: z.object({
     surtitre: texteCourt(48).optional(),
@@ -269,7 +387,7 @@ export const zoneSectionSchema = z.object({
 
 export const appelSchema = z.object({
   type: z.literal("appel"),
-  variante: z.enum(["bande", "carte"]),
+  variante: z.enum(VARIANTES.appel),
   ...enTete,
   contenu: z.object({
     titre: texteCourt(90),
@@ -280,7 +398,7 @@ export const appelSchema = z.object({
 
 export const devisSchema = z.object({
   type: z.literal("devis"),
-  variante: z.enum(["scinde", "encadre"]),
+  variante: z.enum(VARIANTES.devis),
   ...enTete,
   contenu: z.object({
     surtitre: texteCourt(48).optional(),
@@ -293,8 +411,34 @@ export const devisSchema = z.object({
   }),
 });
 
+/**
+ * Élément sur mesure : section propre à ce site, codée par l'Intégrateur dans `src/sections/custom/<composant>.astro`
+ * (mêmes jetons, mêmes règles de qualité). Les textes restent ici (écrits par le Rédacteur, vérifiés comme les autres).
+ */
+export const surMesureSchema = z.object({
+  type: z.literal("surmesure"),
+  variante: z.literal("composant"),
+  /** Nom du composant (PascalCase), fichier `src/sections/custom/<composant>.astro`. */
+  composant: z.string().regex(/^[A-Z][A-Za-z0-9]{2,40}$/, "nom de composant en PascalCase (ex. FriseDepannage)"),
+  ...enTete,
+  contenu: z.object({
+    surtitre: texteCourt(48).optional(),
+    titre: texteCourt(90),
+    intro: texteCourt(320).optional(),
+    elements: z
+      .array(z.object({ titre: texteCourt(60), texte: texteCourt(260).optional(), detail: texteCourt(80).optional() }))
+      .max(10)
+      .optional(),
+    image: cleImage.optional(),
+    /** Libellés d'un appel à l'action dans l'élément (téléphone, devis), si sa conception en prévoit un. */
+    boutonAppel: texteCourt(24).optional(),
+    boutonDevis: texteCourt(28).optional(),
+  }),
+});
+
 export const sectionSchema = z.discriminatedUnion("type", [
   heroSchema,
+  surMesureSchema,
   servicesSchema,
   pourquoiSchema,
   realisationsSchema,
@@ -317,11 +461,11 @@ export const siteSchema = z
     theme: themeSchema,
     images: z.record(cleImage, imageSchema).default({}),
     entete: z
-      .object({ variante: z.enum(["simple", "double"]), boutonDevis: texteCourt(24).optional() })
+      .object({ variante: z.enum(ENTETES), boutonDevis: texteCourt(24).optional() })
       .default({ variante: "simple" }),
     sections: z.array(sectionSchema).min(2),
     pied: z
-      .object({ variante: z.enum(["complet", "sobre"]), phrase: texteCourt(200).optional() })
+      .object({ variante: z.enum(PIEDS), phrase: texteCourt(200).optional() })
       .default({ variante: "complet" }),
     seo: z.object({
       /** URL publique (sans / final). Sert au sitemap, au canonical et à l'Open Graph. */
@@ -386,7 +530,7 @@ export const siteSchema = z
       const p = ["sections", i, "contenu"];
       if (s.type === "hero") {
         verifierImage(s.contenu.image, [...p, "image"]);
-        if ((s.variante === "photo" || s.variante === "scinde") && !s.contenu.image) {
+        if (s.variante !== "typo" && !s.contenu.image) {
           ctx.addIssue({ code: "custom", path: [...p, "image"], message: `le hero « ${s.variante} » demande une image` });
         }
         if (s.contenu.titreAccent && !s.contenu.titre.includes(s.contenu.titreAccent)) {
@@ -406,6 +550,13 @@ export const siteSchema = z
         }
       }
       if (s.type === "pourquoi") verifierImage(s.contenu.image, [...p, "image"]);
+      if (s.type === "surmesure") verifierImage(s.contenu.image, [...p, "image"]);
+      if (s.type === "pourquoi" && s.variante === "encadre" && !s.contenu.image) {
+        ctx.addIssue({ code: "custom", path: [...p, "image"], message: "la variante « encadre » demande une image" });
+      }
+      if (s.type === "realisations" && s.variante === "diptyque" && s.contenu.images.length > 6) {
+        ctx.addIssue({ code: "custom", path: [...p, "images"], message: "la variante « diptyque » accepte 6 images au plus" });
+      }
       if (s.type === "appel") verifierImage(s.contenu.image, [...p, "image"]);
       if (s.type === "realisations") s.contenu.images.forEach((im, j) => verifierImage(im.image, [...p, "images", j, "image"]));
       if (s.type === "avis" && !site.entreprise.noteGoogle) {
@@ -437,6 +588,9 @@ export type Metier = (typeof METIERS)[number];
 export type Preset = (typeof PRESETS)[number];
 export type Police = (typeof POLICES)[number];
 export type Signature = (typeof SIGNATURES)[number];
+export type PairePolices = (typeof PAIRES_POLICES)[number];
+export type Palette = z.output<typeof paletteSchema>;
+export type Fond = (typeof FONDS)[number];
 
 /** Résultat de validation : soit le site, soit une liste d'erreurs lisibles en français. */
 export function validerSite(donnees: unknown): { ok: true; site: Site } | { ok: false; erreurs: string[] } {

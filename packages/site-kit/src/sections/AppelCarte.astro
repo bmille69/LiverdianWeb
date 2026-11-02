@@ -25,7 +25,7 @@ const img = image(c.image);
     <div class:list={["sur-sombre overflow-hidden rounded-ui-l bg-sombre text-sur-sombre", img && "grid md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]"]}>
       {
         img && (
-          <div class="relative aspect-[16/9] md:aspect-auto">
+          <div class="media relative aspect-[16/9] md:aspect-auto">
             <Picture
               src={img.src}
               alt={img.alt}
@@ -40,7 +40,7 @@ const img = image(c.image);
         )
       }
       <div class="p-8 sm:p-10 lg:p-14">
-        <h2 id={`${id}-titre`} class="text-[1.875rem] leading-[1.12] md:text-[2.5rem]">{c.titre}</h2>
+        <h2 id={`${id}-titre`} class="titre-bloc">{c.titre}</h2>
         {c.texte && <p class="texte-doux mt-4 max-w-xl text-[1.0625rem]">{c.texte}</p>}
         <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
           <a href={tel.lien} class="btn btn-primaire h-14 px-6!">

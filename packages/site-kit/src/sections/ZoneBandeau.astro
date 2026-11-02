@@ -1,0 +1,52 @@
+---
+/**
+ * Zone « bandeau » : bande compacte (sombre par défaut). Titre et intro courte à gauche ; à droite, la commune du
+ * siège en très grand et les communes voisines en ligne. Transition légère entre deux grosses sections.
+ */
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, site, ancreDevis } from "../lib/site.ts";
+import Section from "../components/Section.astro";
+import Surtitre from "../components/Surtitre.astro";
+import Icone from "../components/Icone.astro";
+interface Props {
+  section: SectionDe<"zone">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const z = site.zone;
+---
+
+<Section id={id} fond={fond} texture class="py-14! md:py-20!">
+  <div class="conteneur grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center lg:gap-16">
+    <div>
+      <Surtitre texte={c.surtitre} />
+      <h2 id={`${id}-titre`} class:list={["titre-bloc", c.surtitre && "mt-3"]}>{c.titre}</h2>
+      {c.intro && <p class="texte-doux mt-4 max-w-xl text-[1.0625rem]">{c.intro}</p>}
+      <a href={ancreDevis} class="lien mt-6 inline-flex min-h-11 items-center gap-2">
+        Vérifier votre commune avec un devis
+        <Icone nom="arrow-right" class="size-4" />
+      </a>
+    </div>
+    <div class="lg:border-l lg:border-current/15 lg:pl-12">
+      <p class="flex items-center gap-3">
+        <Icone nom="map-pin" class="size-7 shrink-0 texte-accent md:size-9" />
+        <span class="font-titres text-[2.5rem] leading-none [overflow-wrap:anywhere] md:text-[3.5rem] lg:text-[4rem]">{z.commune.nom}</span>
+      </p>
+      {/* Le point médian suit chaque commune (jamais en début de ligne quand la liste passe à la ligne). */}
+      <ul class="mt-6 flex flex-wrap gap-x-3 gap-y-2 text-[1.0625rem]" aria-label="Communes voisines desservies">
+        {
+          z.voisines.map((v, i) => (
+            <li class="whitespace-nowrap">
+              {v.nom}
+              {i < z.voisines.length - 1 && <span aria-hidden="true" class="texte-accent pl-3">·</span>}
+            </li>
+          ))
+        }
+      </ul>
+      {z.precision && <p class="texte-doux mt-5 text-[0.9375rem]">{z.precision}</p>}
+    </div>
+  </div>
+</Section>

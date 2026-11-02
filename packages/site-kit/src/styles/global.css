@@ -103,18 +103,18 @@
     }
   }
 
-  /* Rythme vertical des sections : 64 px mobile, 96 px tablette, 128 px bureau. */
+  /* Rythme vertical des sections : selon la densité du site (theme.mise.densite), 64/96/128 px par défaut. */
   .section {
-    padding-block: 4rem;
+    padding-block: var(--section-s, 4rem);
   }
   @media (min-width: 48rem) {
     .section {
-      padding-block: 6rem;
+      padding-block: var(--section-m, 6rem);
     }
   }
   @media (min-width: 80rem) {
     .section {
-      padding-block: 8rem;
+      padding-block: var(--section-l, 8rem);
     }
   }
 
@@ -217,9 +217,43 @@
     color: var(--c-accent-sur-sombre);
   }
 
-  /* Titres de section : échelle fixe. */
+  /*
+   * Échelle typographique (theme.mise.echelle) : les tailles de titre passent par ces classes, jamais par une valeur
+   * fixe, pour que l'échelle choisie s'applique partout. --k-casse réduit un peu les titres en capitales.
+   */
   .titre-section {
-    font-size: clamp(2rem, 1.35rem + 2.4vw, 3.25rem);
+    font-size: clamp(
+      calc(2rem * var(--k-casse, 1)),
+      calc((1.35rem + 2.4vw) * var(--k-h2, 1) * var(--k-casse, 1)),
+      calc(3.25rem * var(--k-h2, 1) * var(--k-casse, 1))
+    );
+  }
+  /* H1 des heros avec photo (photo, scindé, encart). */
+  .h1-hero {
+    font-size: clamp(
+      calc(2.375rem * var(--k-h1m, 1) * var(--k-casse, 1)),
+      calc((1.2rem + 3.4vw) * var(--k-h1, 1) * var(--k-casse, 1)),
+      calc(4.25rem * var(--k-h1, 1) * var(--k-casse, 1))
+    );
+    line-height: 1.04;
+  }
+  /* H1 des heros typographiques (typo, panorama) : un cran au-dessus. */
+  .h1-hero-xl {
+    font-size: clamp(
+      calc(2.625rem * var(--k-h1m, 1) * var(--k-casse, 1)),
+      calc((1.3rem + 4vw) * var(--k-h1, 1) * var(--k-casse, 1)),
+      calc(5.25rem * var(--k-h1, 1) * var(--k-casse, 1))
+    );
+    line-height: 1.02;
+  }
+  /* Titres de bloc à l'intérieur d'une section (manifeste, appel, zone…). */
+  .titre-bloc {
+    font-size: clamp(
+      calc(1.875rem * var(--k-casse, 1)),
+      calc((1.3rem + 1.9vw) * var(--k-h2, 1) * var(--k-casse, 1)),
+      calc(2.75rem * var(--k-h2, 1) * var(--k-casse, 1))
+    );
+    line-height: 1.1;
   }
   .intro {
     font-size: 1.125rem;
@@ -265,4 +299,76 @@
   .sur-sombre .sur-clair :focus-visible {
     outline-color: var(--c-accent-texte);
   }
+}
+
+/* ─── Mise en page propre au site (attributs posés sur <html> par Base.astro) ──────────────────────────────── */
+
+/* Titres en capitales : approche ouverte, tailles réduites par --k-casse. */
+:root {
+  --interligne-nom: 1.02;
+}
+[data-titres="capitales"] {
+  --k-casse: 0.86;
+  --interligne-nom: 1.12;
+}
+[data-titres="capitales"] :is(h1, h2, .titre) {
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  /* Les accents des capitales (É, À) ne doivent pas toucher la ligne du dessus. */
+  line-height: 1.12;
+}
+
+/* Boutons. */
+[data-boutons="pilule"] .btn {
+  border-radius: 999px;
+}
+[data-boutons="carre"] .btn {
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.9375rem;
+}
+[data-boutons="marque"] .btn {
+  border-radius: 0;
+}
+[data-boutons="marque"] .btn-primaire {
+  box-shadow: 4px 4px 0 var(--c-encre);
+}
+[data-boutons="marque"] .sur-sombre .btn-primaire {
+  box-shadow: 4px 4px 0 var(--c-sur-sombre-doux);
+}
+[data-boutons="marque"] .btn-primaire:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--c-encre);
+}
+[data-boutons="marque"] .btn-secondaire {
+  border-width: 2px;
+}
+
+/* Traitement des photos : tout conteneur d'image porte la classe .media. */
+.media {
+  position: relative;
+}
+[data-images="franc"] .media {
+  border-radius: 0 !important;
+}
+[data-images="passe-partout"] .media {
+  outline: 7px solid var(--c-surface);
+  outline-offset: -7px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 18px 40px -26px rgb(0 0 0 / 0.45);
+}
+[data-images="duotone"] .media img {
+  filter: grayscale(0.7) contrast(1.05);
+}
+[data-images="duotone"] .media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--c-accent);
+  mix-blend-mode: color;
+  opacity: 0.32;
+  pointer-events: none;
+}
+[data-images="contraste"] .media img {
+  filter: contrast(1.08) saturate(1.12);
 }

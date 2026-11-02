@@ -1,5 +1,7 @@
 ---
-/** Surtitre de section avec le marqueur de la signature du thème. */
+/**
+ * Surtitre de section. Style selon `theme.mise.surtitres` : marqueur de la signature (défaut), filet, pastille, simple.
+ */
 import { theme } from "../lib/site.ts";
 interface Props {
   texte?: string;
@@ -7,46 +9,93 @@ interface Props {
 }
 const { texte, class: classe = "" } = Astro.props;
 const sig = theme.signature;
+const style = theme.mise.surtitres;
 ---
 
 {
   texte && (
-    <p class:list={["flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.14em] texte-accent", classe]}>
-      <span aria-hidden="true" class="inline-flex shrink-0">
-        {sig === "faisceau" && (
-          <svg width="22" height="10" viewBox="0 0 22 10" fill="none">
-            <path d="M0 5h14" stroke="currentColor" stroke-width="1.5" />
-            <rect x="15" y="1" width="6" height="8" fill="currentColor" />
-          </svg>
-        )}
-        {sig === "onde" && (
-          <svg width="26" height="10" viewBox="0 0 26 10" fill="none">
-            <path d="M1 5c3-4 6-4 8 0s5 4 8 0 5-4 8 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          </svg>
-        )}
-        {sig === "isobares" && (
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5" />
-            <circle cx="7" cy="7" r="2.5" fill="currentColor" />
-          </svg>
-        )}
-        {sig === "tuiles" && (
-          <svg width="24" height="10" viewBox="0 0 24 10" fill="none">
-            <path d="M1 9a5.5 5.5 0 0 1 11 0M12 9a5.5 5.5 0 0 1 11 0" stroke="currentColor" stroke-width="1.75" />
-          </svg>
-        )}
-        {sig === "veinage" && (
-          <svg width="26" height="10" viewBox="0 0 26 10" fill="none">
-            <path d="M1 3c6-2 10 2 16 0s6-1 8 0M1 7c5-1 9 2 14 0s7-1 10 0" stroke="currentColor" stroke-width="1.25" />
-          </svg>
-        )}
-        {sig === "aplat" && (
-          <svg width="22" height="12" viewBox="0 0 22 12" fill="none">
-            <rect width="10" height="12" fill="currentColor" />
-            <rect x="12" width="10" height="12" fill="currentColor" opacity=".45" />
-          </svg>
-        )}
-      </span>
+    <p
+      class:list={[
+        "surtitre flex items-center gap-3 text-sm font-semibold uppercase tracking-[0.14em] texte-accent",
+        // Contour seulement : un fond teinté baisserait le contraste du texte d'accent sous le seuil AA.
+        style === "pastille" && "w-fit rounded-full border border-current/35 px-3.5 py-1.5 tracking-[0.1em]",
+        // Une pastille (largeur ajustée) se centre par ses marges quand le titre est centré.
+        style === "pastille" && classe.includes("justify-center") && "mx-auto",
+        classe,
+      ]}
+    >
+      {style === "filet" && <span aria-hidden="true" class="h-0.5 w-10 shrink-0 bg-current" />}
+      {style === "marqueur" && (
+        <span aria-hidden="true" class="inline-flex shrink-0">
+          {sig === "faisceau" && (
+            <svg width="22" height="10" viewBox="0 0 22 10" fill="none">
+              <path d="M0 5h14" stroke="currentColor" stroke-width="1.5" />
+              <rect x="15" y="1" width="6" height="8" fill="currentColor" />
+            </svg>
+          )}
+          {sig === "onde" && (
+            <svg width="26" height="10" viewBox="0 0 26 10" fill="none">
+              <path d="M1 5c3-4 6-4 8 0s5 4 8 0 5-4 8 0" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+            </svg>
+          )}
+          {sig === "isobares" && (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <circle cx="7" cy="7" r="6" stroke="currentColor" stroke-width="1.5" />
+              <circle cx="7" cy="7" r="2.5" fill="currentColor" />
+            </svg>
+          )}
+          {sig === "tuiles" && (
+            <svg width="24" height="10" viewBox="0 0 24 10" fill="none">
+              <path d="M1 9a5.5 5.5 0 0 1 11 0M12 9a5.5 5.5 0 0 1 11 0" stroke="currentColor" stroke-width="1.75" />
+            </svg>
+          )}
+          {sig === "veinage" && (
+            <svg width="26" height="10" viewBox="0 0 26 10" fill="none">
+              <path d="M1 3c6-2 10 2 16 0s6-1 8 0M1 7c5-1 9 2 14 0s7-1 10 0" stroke="currentColor" stroke-width="1.25" />
+            </svg>
+          )}
+          {sig === "aplat" && (
+            <svg width="22" height="12" viewBox="0 0 22 12" fill="none">
+              <rect width="10" height="12" fill="currentColor" />
+              <rect x="12" width="10" height="12" fill="currentColor" opacity=".45" />
+            </svg>
+          )}
+          {sig === "cotes" && (
+            <svg width="28" height="10" viewBox="0 0 28 10" fill="none">
+              <path d="M1 1v8M27 1v8M1 5h26M1 5l4-2v4zM27 5l-4-2v4z" stroke="currentColor" stroke-width="1.25" fill="currentColor" />
+            </svg>
+          )}
+          {sig === "points" && (
+            <svg width="22" height="10" viewBox="0 0 22 10" fill="currentColor">
+              <circle cx="3" cy="5" r="2.5" />
+              <circle cx="11" cy="5" r="2.5" opacity=".6" />
+              <circle cx="19" cy="5" r="2.5" opacity=".3" />
+            </svg>
+          )}
+          {sig === "chevrons" && (
+            <svg width="24" height="10" viewBox="0 0 24 10" fill="none">
+              <path d="M1 8l5-6 5 6 5-6 5 6" stroke="currentColor" stroke-width="1.75" stroke-linejoin="round" />
+            </svg>
+          )}
+          {sig === "briques" && (
+            <svg width="24" height="12" viewBox="0 0 24 12" fill="currentColor">
+              <rect width="11" height="5" />
+              <rect x="13" width="11" height="5" opacity=".5" />
+              <rect x="6" y="7" width="11" height="5" opacity=".75" />
+            </svg>
+          )}
+          {sig === "rayures" && (
+            <svg width="20" height="12" viewBox="0 0 20 12" fill="none">
+              <path d="M2 12L8 0M8 12L14 0M14 12L20 0" stroke="currentColor" stroke-width="2.5" />
+            </svg>
+          )}
+          {sig === "topo" && (
+            <svg width="16" height="14" viewBox="0 0 16 14" fill="none">
+              <path d="M2 7c0-3 3-5 6-5s6 2 6 5-3 5-6 5-6-2-6-5zM5.5 7c0-1.5 1.2-2.5 2.5-2.5s2.5 1 2.5 2.5S9.3 9.5 8 9.5 5.5 8.5 5.5 7z" stroke="currentColor" stroke-width="1.25" />
+            </svg>
+          )}
+        </span>
+      )}
       <span>{texte}</span>
     </p>
   )

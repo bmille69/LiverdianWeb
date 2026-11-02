@@ -1,0 +1,44 @@
+---
+/**
+ * Hero « encart » : photo pleine largeur, texte dans un panneau plein (fond surface, ombre) posé en bas à gauche
+ * qui déborde sous la photo au bureau. Le texte ne passe jamais sur la photo : toute bonne photo convient, même chargée.
+ * Mobile : la photo devient une bande en haut, le panneau passe dessous. Image chargée en priorité.
+ */
+import { Picture } from "astro:assets";
+import type { SectionDe } from "../schema.ts";
+import { imageRequise } from "../lib/images.ts";
+import Surtitre from "../components/Surtitre.astro";
+import TitreHero from "../components/TitreHero.astro";
+import BoutonsHero from "../components/BoutonsHero.astro";
+interface Props {
+  section: SectionDe<"hero">;
+}
+const { contenu: c } = Astro.props.section;
+const img = imageRequise(c.image);
+---
+
+<!-- Fond sombre sous le panneau (pas de classe sur-sombre : le texte vit dans le panneau clair). -->
+<section id="haut" aria-labelledby="haut-titre" class="relative isolate overflow-hidden bg-sombre">
+  <div class="media relative aspect-[16/10] sm:aspect-[16/9] lg:aspect-auto lg:h-[min(48rem,calc(100svh-4.5rem))] lg:min-h-[42rem]">
+    <Picture
+      src={img.src}
+      alt={img.alt}
+      widths={[640, 960, 1280, 1600, 2000, 2400].filter((w) => w <= img.src.width)}
+      sizes="100vw"
+      formats={["avif", "webp"]}
+      quality={58}
+      loading="eager"
+      fetchpriority="high"
+      class="absolute inset-0 h-full w-full object-cover"
+      style={`object-position:${img.focale}`}
+    />
+  </div>
+  <div class="conteneur relative max-lg:px-0 lg:absolute lg:inset-x-0 lg:bottom-0 lg:pb-12 xl:pb-14">
+    <div class="bg-surface px-5 pt-7 pb-10 text-encre sm:px-8 lg:max-w-[42rem] lg:rounded-ui-l lg:p-12 lg:shadow-[0_40px_80px_-40px_rgb(0_0_0/0.55)] xl:max-w-[46rem]">
+      <Surtitre texte={c.surtitre} />
+      <TitreHero titre={c.titre} accent={c.titreAccent} class="h1-hero mt-4" />
+      <p class="texte-doux mt-5 text-[1.0625rem] leading-relaxed sm:text-lg">{c.sousTitre}</p>
+      <BoutonsHero contenu={c} class="mt-8" />
+    </div>
+  </div>
+</section>

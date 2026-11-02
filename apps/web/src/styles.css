@@ -1293,6 +1293,9 @@ code {
 .src-audit {
   --src: var(--t-violet);
 }
+.src-osm {
+  --src: var(--t-green);
+}
 .kv-grid {
   display: grid;
   grid-template-columns: 110px 1fr;

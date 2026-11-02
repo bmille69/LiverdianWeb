@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { api, type EtapeMeta, type Fabrication, type Passe, type RecetteAtelier, type SiteDetail, type Tour } from "../api.ts";
+import { api, type EtapeMeta, type Fabrication, type Passe, type RecetteAtelier, type SiteDetail, type Tour, type Unicite } from "../api.ts";
 import { useApi, useLive } from "../live.tsx";
 import { Link } from "../router.tsx";
 import { Icon } from "../ui/Icon.tsx";
@@ -91,6 +91,7 @@ export function SiteScreen({ id }: { id: string }) {
           ) : (
             <>
               <Bandeau f={f} recette={recette} liveLabel={live?.progress.label ?? null} liveLine={live?.progress.lines.at(-1)?.text ?? null} />
+              {data.unicite && <LigneUnicite u={data.unicite} />}
               <div className="fab-grid">
                 <section className="panel fab-frise">
                   <header className="panel-head">
@@ -156,6 +157,34 @@ function Bandeau({ f, recette, liveLabel, liveLine }: { f: Fabrication; recette:
       </div>
       {f.etat === "en_cours" && <div className="fab-banner-time mono">{duree(total)}</div>}
     </div>
+  );
+}
+
+// ── Unicité ─────────────────────────────────────────────────────────────────
+
+const virgule = (n: number, d: number) => n.toLocaleString("fr-FR", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+/** « Unicité : site le plus proche = X, distance d, similarité texte s » (dernière mesure du registre). */
+function LigneUnicite({ u }: { u: Unicite }) {
+  const pp = u.plusProche;
+  const tm = u.texteMax;
+  return (
+    <p className={`fab-unicite ${u.ok ? "ok" : "ko"}`} title={`Mesuré le ${new Date(u.mesureLe).toLocaleString("fr-FR")} contre ${u.comparaisons} site(s) du registre`}>
+      <Icon name={u.ok ? "check-circle" : "alert"} size={14} />
+      <span>
+        <strong>Unicité</strong>
+        {pp ? (
+          <>
+            {" "}: site le plus proche = {pp.site} ({pp.commune}{pp.km !== null ? `, ${virgule(pp.km, 1)} km` : ""}), distance {virgule(pp.distance, 2)}
+            {pp.seuil !== null && <span className="muted"> (min. {virgule(pp.seuil, 2)})</span>}, similarité texte {tm ? virgule(tm.similarite, 3) : "0"}
+            {tm && tm.similarite > 0 && <span className="muted"> ({tm.site}, max. {virgule(tm.seuil, 2)})</span>}
+            {!u.ok && <> · {u.conflits} conflit{u.conflits > 1 ? "s" : ""}</>}
+          </>
+        ) : (
+          " : aucun autre site au registre"
+        )}
+      </span>
+    </p>
   );
 }
 

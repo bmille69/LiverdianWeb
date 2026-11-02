@@ -26,7 +26,7 @@ const n = c.afficherNote ? site.entreprise.noteGoogle : undefined;
   <div class="conteneur grid items-center gap-14 pt-10 pb-20 md:pt-16 md:pb-24 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-16 lg:py-24 xl:gap-24">
     <div>
       <Surtitre texte={c.surtitre} />
-      <TitreHero titre={c.titre} accent={c.titreAccent} class="mt-5 text-[2.5rem] leading-[1.04] sm:text-[3.25rem] lg:text-[3.75rem] xl:text-[4.25rem]" />
+      <TitreHero titre={c.titre} accent={c.titreAccent} class="h1-hero mt-5" />
       <p class="intro texte-doux mt-6 text-lg! md:text-xl!">{c.sousTitre}</p>
       <BoutonsHero contenu={{ ...c, afficherNote: false }} class="mt-9" />
     </div>

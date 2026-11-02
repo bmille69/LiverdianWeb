@@ -3,22 +3,88 @@
  * Pied de page. Variantes :
  * - « complet » : fond sombre, 4 colonnes (identité, coordonnées, horaires, zone) + ligne légale.
  * - « sobre » : fond teinté, deux lignes compactes (pour les pages déjà denses).
+ * - « signature » : nom commercial composé en très grand sur toute la largeur, puis colonnes compactes et ligne légale.
  * Toujours : téléphone répété, adresse, SIREN, mentions légales, confidentialité.
  */
-import { site, tel, fonds, ancreDevis, libelleDevis } from "../lib/site.ts";
+import { site, tel, fonds, ancreDevis, libelleDevis, nom } from "../lib/site.ts";
 import { horairesFr, sirenFr } from "../lib/format.ts";
 import Icone from "../components/Icone.astro";
 import Logo from "./Logo.astro";
 const e = site.entreprise;
 const horaires = horairesFr(e.horaires);
-const communes = [site.zone.commune, ...site.zone.voisines].map((c) => c.nom);
+// Le point médian est collé (insécable) à la commune qui le précède : une ligne ne commence jamais par « · ».
+const communes = [site.zone.commune, ...site.zone.voisines].map((c) => c.nom.replace(/ /g, " "));
 const annee = new Date().getFullYear();
 // Si la dernière section est déjà sombre, le pied complet passe en teinté pour garder la séparation.
 const sombre = site.pied.variante === "complet" && fonds[fonds.length - 1] !== "sombre";
+// Variante « signature » : sombre aussi, sauf si la dernière section l'est déjà.
+const sigSombre = fonds[fonds.length - 1] !== "sombre";
+// Nom en très grand : taille fluide (≈ 0,62 em par caractère). Sur mobile le nom passe à la ligne entre les mots :
+// la taille suit le mot le plus long ; au bureau, le plafond suit le nom entier (une ligne dans 78rem).
+const motLong = Math.max(5, ...nom.split(/\s+/).map((m) => m.length));
+const plafond = Math.min(11, 72 / (Math.max(6, nom.length) * 0.62));
+const tailleNom = `clamp(2rem, ${(88 / (motLong * 0.62)).toFixed(2)}vw, ${plafond.toFixed(2)}rem)`;
+const lienLegal = "texte-doux inline-flex min-h-11 items-center underline-offset-4 hover:underline";
 ---
 
 {
-  site.pied.variante === "complet" ? (
+  site.pied.variante === "signature" ? (
+    <footer class:list={[sigSombre ? "fond-sombre sur-sombre" : "fond-teinte border-t border-trait", "overflow-hidden pt-14 pb-8 md:pt-20"]}>
+      <div class="conteneur">
+        {/* Interligne assez ouvert pour les capitales accentuées (É, À) d'une seconde ligne : --interligne-nom (global.css). */}
+        <p aria-hidden="true" class="titre font-titres leading-(--interligne-nom)! [overflow-wrap:anywhere]" style={`font-size:${tailleNom}`}>
+          {nom}
+        </p>
+        <div class:list={["mt-10 grid gap-10 border-t pt-10 sm:grid-cols-2 lg:grid-cols-4", sigSombre ? "border-white/12" : "border-trait"]}>
+          <div>
+            <Logo clair={sigSombre} />
+            {site.pied.phrase && <p class="texte-doux mt-4 text-[0.9375rem]">{site.pied.phrase}</p>}
+          </div>
+          <div>
+            <h2 class="font-corps text-sm font-semibold uppercase tracking-[0.12em] texte-accent">Coordonnées</h2>
+            <address class="mt-3 space-y-1 text-[0.9375rem] not-italic">
+              <p>{e.adresse.rue}<br />{e.adresse.codePostal} {e.adresse.commune}</p>
+              <p><a href={tel.lien} class="inline-flex min-h-11 items-center font-semibold tabular-nums underline-offset-4 hover:underline">{tel.affiche}</a></p>
+              {e.email && <p><a href={`mailto:${e.email}`} class="inline-flex min-h-11 items-center break-all underline-offset-4 hover:underline">{e.email}</a></p>}
+            </address>
+          </div>
+          {(horaires.length > 0 || e.horairesNote) && (
+            <div>
+              <h2 class="font-corps text-sm font-semibold uppercase tracking-[0.12em] texte-accent">Horaires</h2>
+              {horaires.length > 0 && (
+                <dl class="mt-3 space-y-2 text-[0.9375rem]">
+                  {horaires.map((h) => (
+                    <div>
+                      <dt class="font-medium">{h.jours}</dt>
+                      <dd class="texte-doux">{h.heures}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              {e.horairesNote && <p class="texte-doux mt-2 text-sm">{e.horairesNote}</p>}
+            </div>
+          )}
+          <div>
+            <h2 class="font-corps text-sm font-semibold uppercase tracking-[0.12em] texte-accent">Zone d’intervention</h2>
+            <p class="texte-doux mt-3 text-[0.9375rem] leading-relaxed">{communes.join(" · ")}</p>
+            <a href={ancreDevis} class="lien mt-2 inline-flex min-h-11 items-center gap-1.5 text-[0.9375rem]">
+              {libelleDevis} <Icone nom="arrow-right" class="size-4" />
+            </a>
+          </div>
+        </div>
+        <div class:list={["mt-12 flex flex-col gap-3 border-t pt-6 text-sm md:flex-row md:items-center md:justify-between", sigSombre ? "border-white/12" : "border-trait"]}>
+          <p class="texte-doux">
+            © {annee} {e.raisonSociale}{e.siren && ` · SIREN ${sirenFr(e.siren)}`}
+          </p>
+          <ul class="flex flex-wrap gap-x-6 gap-y-1">
+            <li><a href="/mentions-legales/" class={lienLegal}>Mentions légales</a></li>
+            <li><a href="/confidentialite/" class={lienLegal}>Confidentialité</a></li>
+            <li><a href={site.demo.agenceUrl ?? "https://liverdian.fr"} class={lienLegal}>Site réalisé par {site.demo.agence}</a></li>
+          </ul>
+        </div>
+      </div>
+    </footer>
+  ) : site.pied.variante === "complet" ? (
     <footer class:list={[sombre ? "fond-sombre sur-sombre" : "fond-teinte border-t border-trait", "pt-16 pb-8 md:pt-20"]}>
       <div class="conteneur">
         <div class:list={["grid gap-12 md:grid-cols-2 lg:gap-10", horaires.length || e.horairesNote ? "lg:grid-cols-[1.4fr_1fr_1fr_1fr]" : "lg:grid-cols-[1.4fr_1fr_1fr]"]}>
@@ -56,7 +122,7 @@ const sombre = site.pied.variante === "complet" && fonds[fonds.length - 1] !== "
           )}
           <div>
             <h2 class="font-corps text-sm font-semibold uppercase tracking-[0.12em] texte-accent">Zone d’intervention</h2>
-            <p class="texte-doux mt-4 text-[0.9375rem] leading-relaxed">{communes.join(" · ")}</p>
+            <p class="texte-doux mt-4 text-[0.9375rem] leading-relaxed">{communes.join(" · ")}</p>
             <a href={ancreDevis} class="lien mt-4 inline-flex min-h-11 items-center gap-1.5 text-[0.9375rem]">
               {libelleDevis} <Icone nom="arrow-right" class="size-4" />
             </a>

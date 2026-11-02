@@ -7,6 +7,7 @@ import { DeepSeekClient, type FetchLike } from "./agents/deepseek.ts";
 import { getAgent } from "./agents/registry.ts";
 import { SiteKit, type KitRunner } from "./atelier/kit.ts";
 import { Atelier } from "./atelier/moteur.ts";
+import { Registre } from "./atelier/registre.ts";
 import type { Recette } from "./atelier/recette.ts";
 import { RECETTES_ATELIER } from "./atelier/recettes/index.ts";
 import { SkillLibrary } from "./agents/skills.ts";
@@ -17,6 +18,7 @@ import { HubError } from "./domain/errors.ts";
 import { Settings } from "./domain/settings.ts";
 import { SiteService } from "./domain/sites.ts";
 import { JobQueue } from "./jobs/job-queue.ts";
+import { Prospection, type ProspectionOptions } from "./prospection/index.ts";
 
 export type HubOptions = {
   dataDir: string;
@@ -33,6 +35,8 @@ export type HubOptions = {
   atelierAgents?: ConstructorParameters<typeof Atelier>[0]["agents"];
   recettes?: Recette[];
   now?: () => Date;
+  /** Prospection : réseau simulé, faux serveurs, Lighthouse et Éclaireur simulés (tests). */
+  prospection?: ProspectionOptions;
 };
 
 export type Hub = ReturnType<typeof createHub>;
@@ -62,6 +66,7 @@ export function createHub(opts: HubOptions) {
   const agents = new AgentService({ db, cli, deepseek, skills, settings, events, runsDir: join(opts.dataDir, "runs") });
   const jobs = new JobQueue(db, bus, events, () => settings.get("jobs.parallel"));
   const kit = opts.kit ?? new SiteKit(opts.kitDir ?? join(dirname(opts.skillsDir), "packages", "site-kit"));
+  const registre = new Registre({ db, kit, sites, events });
   const atelier = new Atelier({
     db,
     bus,
@@ -72,7 +77,23 @@ export function createHub(opts: HubOptions) {
     recettes: opts.recettes ?? RECETTES_ATELIER,
     agents: opts.atelierAgents ?? agents,
     kit,
+    registre,
     sitesDir: join(opts.dataDir, "sites"),
+    now: opts.now,
+  });
+  const prospection = new Prospection({
+    db,
+    bus,
+    events,
+    settings,
+    companies,
+    jobs,
+    atelier,
+    agents,
+    deepseek,
+    dataDir: opts.dataDir,
+    kitDir: opts.kitDir ?? join(dirname(opts.skillsDir), "packages", "site-kit"),
+    options: opts.prospection,
     now: opts.now,
   });
 
@@ -112,17 +133,29 @@ export function createHub(opts: HubOptions) {
     agents,
     jobs,
     kit,
+    registre,
     atelier,
+    prospection,
     dataDir: opts.dataDir,
     /** Démarre la file puis rattrape les fabrications interrompues (ordre important). */
     start() {
       const r = jobs.start();
+      // Registre des sites : rattrapage idempotent (exemples du kit + maquettes en base), en tâche de fond ;
+      // les étapes qui le lisent attendent qu'il soit prêt.
+      void registre.rattraper();
       const fabrications = atelier.reprendreApresDemarrage();
+      // Purge RGPD des prospects non convertis et file des maquettes (les campagnes en cours repartent avec la file).
+      prospection.start();
       return { ...r, fabrications };
     },
     async close() {
+      prospection.close();
       atelier.close();
       await jobs.stop();
+      await registre.fermer();
+      // Les minuteries déjà programmées par la fin d'un travail (ex. relance de la file des maquettes) passent
+      // avant la fermeture de la base.
+      await new Promise((r) => setTimeout(r, 0));
       db.close();
     },
   };

@@ -1,7 +1,7 @@
 /** Types et accès à l'API du hub. Les messages d'erreur du hub sont déjà en français : on les remonte tels quels. */
 
 export type Statut = "prospect" | "qualifie" | "maquette" | "contacte" | "client" | "perdu" | "exclu";
-export type Source = "saisie" | "sirene" | "places" | "audit";
+export type Source = "saisie" | "sirene" | "places" | "osm" | "audit";
 export type Jour = "lundi" | "mardi" | "mercredi" | "jeudi" | "vendredi" | "samedi" | "dimanche";
 
 export type Company = {
@@ -78,6 +78,16 @@ export type SiteDetail = {
   fichiers: { apercu: boolean; vignette: boolean; captures: string[]; pleinePage: string[] };
   jobs: Job[];
   activite: HubEvent[];
+  /** Dernière mesure d'unicité du site (registre des sites), null si jamais mesurée. */
+  unicite: Unicite | null;
+};
+export type Unicite = {
+  ok: boolean;
+  mesureLe: string;
+  plusProche: { site: string; commune: string; origine: string; km: number | null; distance: number; seuil: number | null } | null;
+  texteMax: { site: string; commune: string; similarite: number; seuil: number } | null;
+  conflits: number;
+  comparaisons: number;
 };
 
 export type JobState = "queued" | "running" | "done" | "failed" | "cancelled";

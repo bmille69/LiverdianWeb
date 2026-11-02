@@ -126,6 +126,24 @@ proposes des corrections précises, classées par impact. Tu ne réécris pas le
     couleur: "#ff7a90",
     icone: "smartphone",
   },
+  {
+    id: "eclaireur",
+    nom: "Éclaireur",
+    resume: "Audit des sites existants et qualification des prospects.",
+    role: `${COMMUN}
+
+Tu es l'Éclaireur. Le hub a déjà relevé par du code ce qui se mesure sur le site actuel d'une entreprise (HTTPS,
+mobile, copyright, technologie, emails visibles). Tu ne tranches que le flou, à partir des extraits exacts qui te
+sont donnés : est-ce une franchise ou un réseau national, est-ce un vrai site de l'entreprise (ou un annuaire, une
+page en construction, le site d'une autre activité), quelle adresse email professionnelle retenir parmi celles
+relevées. Une information absente des extraits reste inconnue (null) : tu ne devines jamais. Tu cites l'extrait
+qui justifie chaque réponse.`,
+    provider: "claude",
+    modele: "haiku",
+    modes: ["structured"],
+    couleur: "#7fd1c7",
+    icone: "prospection",
+  },
 ];
 
 export function getAgent(id: string): AgentDef | undefined {

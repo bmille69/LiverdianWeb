@@ -5,40 +5,94 @@ import { z } from "zod";
  * Ils fixent la forme ; le contrat final (longueurs, variantes, règles croisées) reste celui du kit
  * (`packages/site-kit/src/schema.ts`), appliqué à l'assemblage : une erreur y renvoie à l'agent fautif.
  */
+/*
+ * Ces listes recopient celles du kit (packages/site-kit/src/schema.ts) : le hub n'importe pas le kit dans son code
+ * (dépendances séparées). Un test vérifie qu'elles restent identiques.
+ */
 export const PRESETS = ["electricien", "plombier", "chauffagiste", "couvreur", "menuisier", "peintre"] as const;
-export const POLICES = ["archivo", "barlow-semi-condensed", "bricolage-grotesque", "dm-serif-display", "fraunces", "inter", "manrope", "plus-jakarta-sans", "schibsted-grotesk", "source-sans-3", "space-grotesk", "work-sans"] as const;
-export const SIGNATURES = ["faisceau", "onde", "isobares", "tuiles", "veinage", "aplat"] as const;
-export const TYPES_SECTION = ["hero", "services", "pourquoi", "realisations", "avis", "zone", "appel", "devis"] as const;
+export const POLICES = ["archivo", "barlow-semi-condensed", "bitter", "bricolage-grotesque", "dm-sans", "dm-serif-display", "figtree", "fraunces", "hanken-grotesk", "instrument-sans", "instrument-serif", "inter", "libre-franklin", "literata", "manrope", "newsreader", "oswald", "plus-jakarta-sans", "public-sans", "red-hat-display", "roboto-slab", "schibsted-grotesk", "sora", "source-sans-3", "space-grotesk", "work-sans", "young-serif"] as const;
+export const PAIRES_POLICES = ["atelier-technique", "plan-de-coupe", "chantier-net", "grotesque-franche", "geometrie-douce", "contemporain-clair", "industriel-condense", "affiche-robuste", "signaletique", "editorial-serif", "maison-de-famille", "gazette-locale", "artisan-d-art", "bois-et-papier", "elegance-sobre", "patrimoine", "slab-robuste", "slab-editorial", "rondeur-accueillante", "precision-suisse", "caractere-fort", "classique-moderne"] as const;
+export const SIGNATURES = ["faisceau", "onde", "isobares", "tuiles", "veinage", "aplat", "cotes", "points", "chevrons", "briques", "rayures", "topo"] as const;
+export const TYPES_SECTION = ["hero", "services", "pourquoi", "realisations", "avis", "zone", "appel", "devis", "surmesure"] as const;
 export const COULEURS = ["fond", "surface", "teinte", "encre", "encreDouce", "trait", "sombre", "sombreSurface", "surSombre", "surSombreDoux", "accent", "surAccent", "accentTexte", "accentSurSombre"] as const;
+export const FONDS = ["clair", "surface", "teinte", "sombre"] as const;
+export const ENTETES = ["simple", "double", "centre"] as const;
+export const PIEDS = ["complet", "sobre", "signature"] as const;
 
 export const VARIANTES: Record<(typeof TYPES_SECTION)[number], string[]> = {
-  hero: ["photo", "typo", "scinde"],
-  services: ["cartes", "liste", "bandes"],
-  pourquoi: ["colonnes", "manifeste"],
-  realisations: ["mosaique", "grille"],
+  hero: ["photo", "typo", "scinde", "panorama", "encart"],
+  services: ["cartes", "liste", "bandes", "index", "tuiles"],
+  pourquoi: ["colonnes", "manifeste", "etapes", "encadre"],
+  realisations: ["mosaique", "grille", "bande", "diptyque"],
   avis: ["badge", "bandeau"],
-  zone: ["carte", "liste"],
+  zone: ["carte", "liste", "tableau", "bandeau"],
   appel: ["bande", "carte"],
-  devis: ["scinde", "encadre"],
+  devis: ["scinde", "encadre", "plein", "appel"],
+  surmesure: ["composant"],
 };
+
+export const MISE = {
+  echelle: ["equilibree", "sobre", "affirmee", "monumentale"],
+  densite: ["standard", "compacte", "aeree"],
+  images: ["naturel", "franc", "passe-partout", "duotone", "contraste"],
+  cadre: ["auto", "simple", "equerres", "decale", "arche", "lisere", "coin"],
+  boutons: ["plein", "pilule", "marque", "carre"],
+  rythme: ["alterne", "contraste", "clair", "chaud"],
+  titres: ["normale", "capitales"],
+  surtitres: ["marqueur", "filet", "pastille", "simple"],
+} as const;
+
+export const PALETTE = {
+  vivacite: ["franche", "sourde", "vive"],
+  accentTon: ["clair", "fonce"],
+  neutres: ["teintes", "gris", "colores"],
+  fond: ["casse", "blanc", "teinte"],
+  sombre: ["profond", "nuit", "colore"],
+} as const;
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "couleur #RRGGBB");
 const cle = z.string().regex(/^[a-z0-9][a-z0-9-]*$/, "clé : minuscules, chiffres, tirets");
+
+const teinte = z.number().int().min(0).max(359);
 
 export const DesignSchema = z.object({
   intention: z.array(z.string().min(20)).length(3).describe("L'intention du site en exactement 3 phrases : pour qui, quelle impression, comment il se distingue"),
   theme: z.object({
     preset: z.enum(PRESETS),
+    palette: z
+      .object({
+        teinte: teinte.describe("Teinte des neutres et du fond sombre, 0-359° (cercle OKLCH)"),
+        accent: teinte.describe("Teinte de l'accent, 0-359°"),
+        vivacite: z.enum(PALETTE.vivacite),
+        accentTon: z.enum(PALETTE.accentTon),
+        neutres: z.enum(PALETTE.neutres),
+        fond: z.enum(PALETTE.fond),
+        sombre: z.enum(PALETTE.sombre),
+      })
+      .describe("Palette propre au site, calculée par le code (contrastes AA garantis)"),
     couleurs: z
       .object(Object.fromEntries(COULEURS.map((k) => [k, hex.optional()])) as Record<(typeof COULEURS)[number], z.ZodOptional<typeof hex>>)
-      .describe("Surcharges de jetons du préréglage (au moins accent ou sombre, pour ne pas reproduire un autre site)"),
-    polices: z.object({ titres: z.enum(POLICES).optional(), corps: z.enum(POLICES).optional() }).optional(),
-    rayon: z.union([z.literal(0), z.literal(2), z.literal(4), z.literal(6), z.literal(8), z.literal(12), z.literal(16)]).optional(),
-    signature: z.enum(SIGNATURES).optional(),
+      .optional()
+      .describe("Surcharges ponctuelles de la palette générée : à éviter sauf raison précise"),
+    polices: z.object({ paire: z.enum(PAIRES_POLICES) }).describe("Paire de polices du catalogue"),
+    rayon: z.union([z.literal(0), z.literal(2), z.literal(4), z.literal(6), z.literal(8), z.literal(12), z.literal(16)]),
+    signature: z.enum(SIGNATURES),
+    mise: z
+      .object({
+        echelle: z.enum(MISE.echelle),
+        densite: z.enum(MISE.densite),
+        images: z.enum(MISE.images),
+        cadre: z.enum(MISE.cadre),
+        boutons: z.enum(MISE.boutons),
+        rythme: z.enum(MISE.rythme),
+        titres: z.enum(MISE.titres),
+        surtitres: z.enum(MISE.surtitres),
+      })
+      .describe("Mise en page, indépendante des couleurs"),
   }),
-  ajustements: z.string().min(20).describe("Ce qui distingue ce thème des sites du même métier listés dans le brief, et pourquoi ces teintes"),
-  entete: z.object({ variante: z.enum(["simple", "double"]) }),
-  pied: z.object({ variante: z.enum(["complet", "sobre"]) }),
+  ajustements: z.string().min(20).describe("Ce qui distingue ce site des sites proches du registre (unicite-design.json), et pourquoi ces choix"),
+  entete: z.object({ variante: z.enum(ENTETES) }),
+  pied: z.object({ variante: z.enum(PIEDS) }),
   images: z
     .array(
       z.object({
@@ -57,17 +111,24 @@ export const DesignSchema = z.object({
         variante: z.string(),
         image: cle.optional().describe("Image de la section (hero photo/scinde, pourquoi, appel)"),
         images: z.array(cle).optional().describe("Réalisations : images dans l'ordre ; services bandes : une image par service ; services liste : image du 1er service"),
-        nombreItems: z.number().int().min(2).max(8).optional().describe("Services / pourquoi : nombre d'éléments attendus du Rédacteur"),
+        nombreItems: z.number().int().min(2).max(10).optional().describe("Services / pourquoi / surmesure : nombre d'éléments attendus du Rédacteur"),
+        fond: z.enum(FONDS).optional().describe("Fond imposé (sinon celui de la variante selon le rythme)"),
         justification: z.string().min(10),
       }),
     )
     .min(4)
-    .max(9),
+    .max(10),
   zoneVoisines: z.array(z.string()).optional().describe("Seulement si le brief n'a pas de voisines saisies : 4 à 8 noms exacts pris dans zone.candidates"),
   signature: z.object({ element: z.string().min(3), description: z.string().min(10) }).describe("L'élément signature qui rend ce site reconnaissable"),
   surMesure: z
-    .object({ demande: z.boolean(), consigne: z.string() })
-    .describe("demande=true seulement si un ajustement hors du kit est indispensable ; la consigne dit alors exactement quoi faire à l'Intégrateur"),
+    .object({
+      element: z.string().min(3).max(80).describe("Nom court de l'élément sur mesure (« Frise de la panne à la remise en service »)"),
+      composant: z.string().regex(/^[A-Z][A-Za-z0-9]{2,40}$/).describe("Nom du composant Astro en PascalCase (« FriseDepannage »)"),
+      description: z.string().min(80).describe("Ce que l'élément montre, sa composition, son comportement à 375, 768 et 1440 px, ses jetons : assez précis pour être codé sans deviner"),
+      textes: z.string().min(20).describe("Ce que le Rédacteur doit écrire pour cet élément (titre, intro, éléments : nombre et nature)"),
+      pourquoi: z.string().min(20).describe("Pourquoi cet élément appartient à CETTE entreprise et à aucune autre"),
+    })
+    .describe("L'élément sur mesure du site, placé dans sections (type « surmesure », variante « composant »)"),
 });
 export type Design = z.infer<typeof DesignSchema>;
 
@@ -87,13 +148,18 @@ export const ContenuSectionSchema = z.object({
   afficherNote: z.boolean().optional(),
   reperes: z.array(t(48)).max(3).optional(),
   items: z.array(z.object({ titre: t(60), texte: t(280), icone: z.string().regex(/^[a-z0-9-]+$/).optional(), points: z.array(t(80)).max(4).optional() })).optional(),
+  elements: z
+    .array(z.object({ titre: t(60), texte: t(260).optional(), detail: t(80).optional() }))
+    .max(10)
+    .optional()
+    .describe("Élément sur mesure : ses éléments, comme le demande design.surMesure.textes"),
   legendes: z.array(t(90)).optional().describe("Réalisations : une légende par image, dans l'ordre"),
   besoins: z.array(t(48)).max(10).optional(),
   boutonEnvoyer: t(28).optional(),
 });
 
 export const ContenuSchema = z.object({
-  sections: z.array(ContenuSectionSchema).min(4).max(9),
+  sections: z.array(ContenuSectionSchema).min(4).max(10),
   seo: z.object({ titre: t(60).optional(), description: z.string().min(70).max(170) }),
   piedPhrase: t(200).optional(),
   zonePrecision: t(120).optional(),

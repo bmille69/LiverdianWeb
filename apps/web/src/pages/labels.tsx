@@ -34,6 +34,7 @@ export const SOURCE_LABEL: Record<Source, string> = {
   saisie: "Saisie",
   sirene: "Sirene",
   places: "Google Places",
+  osm: "OpenStreetMap",
   audit: "Audit du site",
 };
 

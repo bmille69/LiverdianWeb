@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { api, type HubEvent, type Job, type JobLogLine, type Meta } from "./api.ts";
 
 /** Ce qui change en direct : la connexion au hub, les travaux, le fil d'activité, et des compteurs pour recharger. */
-type Topic = "companies" | "sites" | "jobs" | "agents" | "settings";
+type Topic = "companies" | "sites" | "jobs" | "agents" | "settings" | "prospection";
 type Live = {
   meta: Meta | null;
   online: boolean;
@@ -20,6 +20,7 @@ function topicOf(type: string): Topic | null {
   if (type.startsWith("job")) return "jobs";
   if (type.startsWith("agent.")) return "agents";
   if (type.startsWith("settings.")) return "settings";
+  if (type.startsWith("prospection.")) return "prospection";
   return null;
 }
 
@@ -28,7 +29,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   const [online, setOnline] = useState(true);
   const [jobs, setJobs] = useState<Map<string, Job>>(new Map());
   const [events, setEvents] = useState<HubEvent[]>([]);
-  const [versions, setVersions] = useState<Record<Topic, number>>({ companies: 0, sites: 0, jobs: 0, agents: 0, settings: 0 });
+  const [versions, setVersions] = useState<Record<Topic, number>>({ companies: 0, sites: 0, jobs: 0, agents: 0, settings: 0, prospection: 0 });
   const bump = useCallback((topic: Topic) => setVersions((v) => ({ ...v, [topic]: v[topic] + 1 })), []);
 
   const seed = useCallback(async () => {

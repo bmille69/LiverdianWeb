@@ -54,7 +54,7 @@ const COL: Record<number, string> = { 1: "md:col-span-1", 2: "md:col-span-2", 4:
           return (
             <li
               class:list={[
-                "group relative overflow-hidden rounded-ui-l bg-teinte",
+                "media group relative overflow-hidden rounded-ui-l bg-teinte",
                 grande ? "col-span-2 aspect-[4/3] md:row-span-2 md:aspect-auto" : "aspect-square md:aspect-auto",
                 derniereSeule && "max-md:col-span-2 max-md:aspect-[2/1]",
                 !grande && COL[p[i - 1] ?? 1],

@@ -41,6 +41,8 @@ export const ATELIER_PROTEGES = [
   "./brief.json",
   "./design.json",
   "./content.json",
+  "./unicite-design.json",
+  "./unicite-textes.json",
   "./.atelier/**",
   "./.check/**",
 ] as const;

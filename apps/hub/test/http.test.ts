@@ -122,7 +122,7 @@ describe("API sites, travaux, agents", () => {
 
   it("liste les agents avec leurs skills, change un modèle, lit un skill", async () => {
     const agents = (await req("GET", "/api/agents")).json().agents;
-    expect(agents.map((a: { id: string }) => a.id)).toEqual(["directeur", "directeur-artistique", "redacteur", "integrateur", "controleur-qa", "relecteur-ux"]);
+    expect(agents.map((a: { id: string }) => a.id)).toEqual(["directeur", "directeur-artistique", "redacteur", "integrateur", "controleur-qa", "relecteur-ux", "eclaireur"]);
     const integ = agents.find((a: { id: string }) => a.id === "integrateur");
     expect(integ.skills.map((s: { name: string }) => s.name)).toEqual(["regles", "astro", "couleurs"]);
     const after = (await req("PUT", "/api/agents/integrateur/model", { model: "sonnet" })).json().agents;
@@ -130,7 +130,7 @@ describe("API sites, travaux, agents", () => {
     expect((await req("PUT", "/api/agents/integrateur/model", { model: "rm -rf" })).statusCode).toBe(400);
     const skill = (await req("GET", "/api/skills/design/couleurs")).json().skill;
     expect(skill.body).toContain("Contraste AA.");
-    expect((await req("GET", "/api/skills")).json().skills.find((s: { path: string }) => s.path === "_shared/regles").agents).toHaveLength(6);
+    expect((await req("GET", "/api/skills")).json().skills.find((s: { path: string }) => s.path === "_shared/regles").agents).toHaveLength(agents.length);
   });
 
   it("réglages : clés connues et valeurs bornées seulement", async () => {

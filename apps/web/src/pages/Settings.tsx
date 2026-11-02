@@ -5,6 +5,7 @@ import { usePrefs } from "../prefs.ts";
 import { Icon } from "../ui/Icon.tsx";
 import { ErrorNote, PageHeader, Skeleton } from "../ui/common.tsx";
 import { useToast } from "../ui/toasts.tsx";
+import { ReglagesProspection } from "./prospection/ReglagesProspection.tsx";
 
 function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
@@ -123,7 +124,7 @@ export function SettingsPage() {
               <div>
                 <div className="setting-title">DeepSeek</div>
                 <div className="setting-desc">
-                  Facultatif, servira à la prospection. Clé dans la variable <code>DEEPSEEK_API_KEY</code> ou dans <code>.data/settings/secrets.json</code>.
+                  Facultatif, sert à l'audit des prospects. Se saisit dans la section Prospection ci-dessous (ou variable <code>DEEPSEEK_API_KEY</code>).
                 </div>
               </div>
               <span className={`badge ${data.deepseek ? "tone-green" : "tone-muted"}`}>{data.deepseek ? "Configuré" : "Non configuré"}</span>
@@ -135,6 +136,8 @@ export function SettingsPage() {
               </div>
             </div>
           </section>
+
+          <ReglagesProspection />
         </>
       )}
     </div>

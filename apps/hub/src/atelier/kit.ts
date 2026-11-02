@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { killTree } from "../agents/claude-cli.ts";
 import { Semaphore } from "../agents/semaphore.ts";
+import type { ThemeResolu } from "./unicite.ts";
 
 /**
  * Accès au kit de sites (`packages/site-kit`) : génération d'un projet, contrôle automatique, découpe des
@@ -30,6 +31,17 @@ export type CheckReport = {
 
 export type NewSiteResult = { ok: true } | { ok: false; message: string; erreurs: string[] };
 
+/** Catalogue du kit : descriptions lisibles de tout ce que le Directeur artistique peut composer. */
+export type Catalogue = {
+  variantes: Record<string, Record<string, string>>;
+  entetes: Record<string, string>;
+  pieds: Record<string, string>;
+  signatures: Record<string, string>;
+  mise: Record<string, Record<string, string>>;
+  palette: Record<string, string | Record<string, string>>;
+  paires: Record<string, { titres: string; corps: string; caractere: string; description: string; metiers: string[] }>;
+};
+
 export interface KitRunner {
   /** Génère (ou régénère) le projet Astro du site à partir d'un site.json. */
   newSite(siteDir: string, siteJsonPath: string, signal?: AbortSignal): Promise<NewSiteResult>;
@@ -41,6 +53,10 @@ export interface KitRunner {
   presets(): Promise<Record<string, { description: string; couleurs: Record<string, string>; polices: { titres: string; corps: string }; rayon: number; signature: string }>>;
   /** Vérifie les contrastes d'un thème (surcharges comprises) : liste d'erreurs, vide si conforme. */
   contrastes(theme: unknown): Promise<string[]>;
+  /** Thème final d'un site (palette générée, paire de polices, mise en page ; cadre « auto » résolu). */
+  resoudreTheme(theme: unknown): Promise<ThemeResolu>;
+  /** Catalogue lisible du kit (variantes, signatures, mise en page, palettes, paires de polices). */
+  catalogue(): Promise<Catalogue>;
   /** Noms d'icônes Lucide disponibles pour le kit (une icône inconnue casse le build). */
   icones(): Set<string>;
   /** Catalogue de la banque d'images (stock/CREDITS.json). */
@@ -138,12 +154,32 @@ export class SiteKit implements KitRunner {
   }
 
   async #theme(): Promise<{ PRESETS_DEF: Awaited<ReturnType<KitRunner["presets"]>>; verifierContrastes: (c: Record<string, string>) => string[]; resoudreTheme: (t: unknown) => { couleurs: Record<string, string> } }> {
-    // Import dynamique : theme.ts n'a que des imports de types, Node l'exécute tel quel.
+    // Import dynamique : Node exécute theme.ts tel quel (ses dépendances, zod comprise, viennent du kit).
     return (await import(pathToFileURL(join(this.root, "src", "lib", "theme.ts")).href)) as never;
   }
 
   async presets() {
     return (await this.#theme()).PRESETS_DEF;
+  }
+
+  async resoudreTheme(theme: unknown): Promise<ThemeResolu> {
+    const t = (await this.#theme()).resoudreTheme(theme) as unknown as ThemeResolu;
+    const { cadre } = (await import(pathToFileURL(join(this.root, "src", "lib", "signatures.ts")).href)) as { cadre: (s: string) => string };
+    return { ...t, mise: { ...t.mise, cadre: t.mise.cadre === "auto" ? cadre(t.signature) : (t.mise.cadre ?? "simple") } };
+  }
+
+  async catalogue(): Promise<Catalogue> {
+    const c = (await import(pathToFileURL(join(this.root, "src", "catalogue.ts")).href)) as Record<string, any>;
+    const { PAIRES_DEF } = (await import(pathToFileURL(join(this.root, "src", "lib", "polices.ts")).href)) as { PAIRES_DEF: Catalogue["paires"] };
+    return {
+      variantes: c.CATALOGUE_VARIANTES,
+      entetes: c.CATALOGUE_ENTETES,
+      pieds: c.CATALOGUE_PIEDS,
+      signatures: c.CATALOGUE_SIGNATURES,
+      mise: c.CATALOGUE_MISE,
+      palette: c.CATALOGUE_PALETTE,
+      paires: PAIRES_DEF,
+    };
   }
 
   async contrastes(theme: unknown): Promise<string[]> {

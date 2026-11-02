@@ -3,10 +3,11 @@
   "shared": ["_shared/regles-maison"],
   "agents": {
     "directeur": [],
-    "directeur-artistique": ["design/web-design-pro", "design/design-par-metier", "design/composition-vitrine-locale", "dev/astro-site-kit"],
-    "redacteur": ["copy/copywriting-artisan-local", "copy/seo-local", "copy/mentions-legales-fr"],
-    "integrateur": ["dev/astro-site-kit", "dev/performance-accessibilite", "design/web-design-pro", "copy/seo-local", "copy/mentions-legales-fr"],
+    "directeur-artistique": ["design/web-design-pro", "design/design-par-metier", "design/composition-vitrine-locale", "design/unicite-des-sites", "dev/astro-site-kit"],
+    "redacteur": ["copy/copywriting-artisan-local", "copy/seo-local", "copy/mentions-legales-fr", "design/unicite-des-sites"],
+    "integrateur": ["dev/astro-site-kit", "dev/performance-accessibilite", "design/web-design-pro", "copy/seo-local", "copy/mentions-legales-fr", "design/unicite-des-sites"],
     "controleur-qa": ["qa/controle-faits", "qa/revue-visuelle", "dev/performance-accessibilite"],
-    "relecteur-ux": ["ux/heuristiques-ux-conversion", "design/web-design-pro", "qa/revue-visuelle"]
+    "relecteur-ux": ["ux/heuristiques-ux-conversion", "design/web-design-pro", "qa/revue-visuelle"],
+    "eclaireur": ["prospection/audit-site-existant"]
   }
 }

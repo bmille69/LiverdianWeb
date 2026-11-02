@@ -2,6 +2,7 @@ import type { AgentService } from "../agents/agent-service.ts";
 import type { Company } from "../domain/companies.ts";
 import type { JobContext } from "../jobs/job-queue.ts";
 import type { KitRunner } from "./kit.ts";
+import type { Registre } from "./registre.ts";
 
 /**
  * Une recette décrit un type de site (VISION §2.2) : ses étapes, leur ordre, leurs agents, ses contrôles et
@@ -23,8 +24,8 @@ export type Issue =
    * de correction), sauf `bloqueLaSuite` (ex. build cassé : plus rien à regarder).
    */
   | { issue: "controle"; ok: boolean; resume: string; sortie?: unknown; consignes: Consigne[]; bloqueLaSuite?: boolean }
-  /** Refus renvoyé à l'étape d'un agent, avec le message exact (une seule fois par étape). */
-  | { issue: "renvoi"; vers: string; message: string; resume: string; sortie?: unknown; cle?: string }
+  /** Refus renvoyé à l'étape d'un agent, avec le message exact (une seule fois par cause, `max` fois si précisé). */
+  | { issue: "renvoi"; vers: string; message: string; resume: string; sortie?: unknown; cle?: string; max?: number }
   /** Arrêt « à revoir » sans correction automatique possible. */
   | { issue: "arret"; motif: string; resume: string; sortie?: unknown };
 
@@ -47,6 +48,8 @@ export type EtapeContexte = {
   refaire: boolean;
   agents: Pick<AgentService, "ask" | "atelier">;
   kit: KitRunner;
+  /** Registre des sites produits (unicité). */
+  registre: Registre;
   job: JobContext;
   now: () => Date;
 };

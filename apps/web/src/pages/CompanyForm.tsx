@@ -6,7 +6,7 @@ import { useToast } from "../ui/toasts.tsx";
 import { SOURCE_LABEL, STATUT } from "./labels.tsx";
 
 const JOURS: Jour[] = ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche"];
-const SOURCES: Source[] = ["saisie", "sirene", "places", "audit"];
+const SOURCES: Source[] = ["saisie", "sirene", "places", "osm", "audit"];
 
 type Draft = {
   raisonSociale: string;

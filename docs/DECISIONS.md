@@ -211,3 +211,163 @@ lui-même `check-site`. Interdits en écriture : `.claude/`, `package.json`, `as
 entrées/preuves de la fabrication (`brief.json`, `design.json`, `content.json`, `.atelier/`, `.check/`). Limite connue :
 un build Astro exécute le code des composants du site, que l'Intégrateur peut modifier ; l'isolement complet demanderait un
 bac à sable système (à décider avant d'ouvrir l'atelier à des demandes extérieures).
+
+## ADR-13 — Prospection : sources légales, campagnes reprenables, score expliqué (2 nov. 2026)
+
+**Contexte.** Phase 2 (VISION §2.1, plan d'origine) : sourcer des artisans, auditer leur présence en ligne, les noter avec
+une grille réglable, et lancer leur maquette en un clic, sans scraping et dans les règles du RGPD.
+
+**Sources (`apps/hub/src/prospection/sources/`).**
+- **API Recherche d'entreprises** (gratuite, sans clé) : `near_point` (commune + rayon ≤ 50 km), `code_commune` ou
+  `departement`, filtrée par codes NAF et `etat_administratif=A`. Intervalle de 220 ms (limite publiée : 7 req/s), reprise
+  sur 429/5xx avec `Retry-After`. Écartés d'office : diffusion partielle (Sirene), **opposition à la prospection déclarée
+  au registre** (`opposition_diffusion_commerciale`), liste d'opposition. On ne garde qu'un dirigeant (prénom et nom).
+- **geo.api.gouv.fr** pour le centre et le nom exact des communes (repli sur la table locale de l'atelier).
+- **OpenStreetMap / Overpass** : une requête par campagne sur la zone (étiquettes `craft=*` des métiers), trois serveurs
+  publics essayés ; s'ils sont saturés, l'étape est sautée et le motif affiché.
+- **Google Places (New)** `places:searchText`, masque de champs minimal. Clé `GOOGLE_PLACES_API_KEY` (environnement ou
+  `.data/settings/secrets.json`, saisissable dans Réglages, jamais renvoyée ni journalisée). Absente : étape sautée.
+  Chaque appel réel est compté (`api_appels`, coût estimé 0,035 $) ; plafond mensuel réglable (900 par défaut, sous le
+  quota gratuit de 1 000) que le hub refuse de dépasser.
+- **Cache** (`api_cache`) : Sirene et OSM 7 jours, Places et communes 30 jours. La clé de cache ne contient jamais de clé
+  d'API. Une même requête n'est jamais repayée dans sa durée de validité.
+
+**Appariement Sirene ↔ Places/OSM** (`appariement.ts`) : nom (mots distinctifs, hors formes juridiques et mots du métier ;
+du dirigeant, le seul nom de famille) et lieu (distance, code postal, numéro, voie). Score stocké avec son détail.
+≥ 0,75 fusionné ; 0,5–0,75 **douteux** : signalé, jamais fusionné sans accord (« Oui, reprendre » / « Non ») ; un
+appariement fusionné peut être contesté. Calibré sur la vraie campagne : « Électricité Générale » (une marque) ou un
+prénom commun ne rapprochent plus deux entreprises.
+
+**Fusion dans `companies`** : clé SIREN (pas de doublon), statut `prospect`/`qualifie`, source par champ (`osm` ajoutée).
+Priorité : une **saisie** n'est jamais écrasée ; sinon une source de rang égal ou supérieur remplace (Places > OSM pour
+le téléphone et le site ; l'audit n'écrit que l'email). Téléphones normalisés au format français. Les fusions en lot
+sont silencieuses (option `silencieux` de `CompanyService`) : un résumé par campagne dans le journal.
+
+**Audit** (`audit.ts`, skill `audit-site-existant`) : le code relève redirections, HTTPS et certificat, viewport,
+copyright, technologie et indices d'âge, emails (accueil + une page contact au plus), `robots.txt` respecté,
+user-agent identifiable ; Lighthouse mobile (performance + accessibilité, une mesure) dans un processus séparé avec Edge,
+via le Lighthouse déjà installé dans le kit (lu, jamais modifié). Le flou (franchise ? vrai site ? quel email ?) va à
+l'agent **Éclaireur** (nouveau, `skills/agents.json` + registre) : DeepSeek si sa clé existe, sinon Claude haiku en
+structured (option `provider` d'`AgentService.ask`). L'email retenu doit figurer tel quel dans les pages visitées.
+Aucune page n'est gardée, seulement les relevés et leurs preuves (constat + URL).
+
+**Score** (`scoring.ts`) : grille du plan par défaut (réglage `prospection.grille`, éditable), code pur, chaque ligne
+expliquée. Une règle qui repose sur une donnée inconnue est marquée « à vérifier » (« aucun site » sans Places, copyright
+déduit d'une technologie, avis sans Places). **Une entreprise qui n'atteint le seuil que grâce à des points à vérifier
+reste « Prospect » (compteur « à vérifier »), pas « Qualifiée »** : sans cette règle, la vraie campagne sans Places
+qualifiait 278 entreprises sur 300 sur la seule absence de site dans OSM.
+
+**Campagnes** (`campagnes.ts`) : critères enregistrés (zod) ; un travail `prospection.campagne` de la file (ADR-04) ; phases
+`sourcing → enrichissement → audit → score → nettoyage` notées sur la campagne, étape notée par entreprise
+(`campagne_prospects`) : un redémarrage reprend à la phase et à l'entreprise près, sans relire Sirene. Fiches écartées par
+les filtres (et sans saisie, site, ni autre campagne) supprimées à la fin (minimisation). Audit de moins de 30 jours sur la
+même adresse réutilisé.
+
+**Maquettes en lot** (`maquettes.ts`) : file visible, plafond `prospection.maquettes.parallele` (1 par défaut) compté sur
+toutes les fabrications en cours ; chaque fin d'étape de l'atelier relance la file ; l'atelier reste juge des prérequis
+(refus affiché avec son motif).
+
+**RGPD** : liste d'opposition à vie en **empreintes SHA-256** (SIREN, téléphone, email), jamais en clair ; « Exclure ›
+Opposition » supprime la fiche (sauf cliente ou avec site) et l'inscrit. Purge des prospects non convertis sans activité
+depuis `prospection.purge.mois` (6) au démarrage puis toutes les 12 h (jamais une cliente, une fiche avec site, ni une
+fiche saisie à la main). Registre de traitement généré par le code à partir de l'état réel (onglet RGPD).
+
+**Vérifié en réel le 2 nov. 2026** (électriciens 43.21A + plombiers 43.22A, Bron + 10 km, sans clé Places) :
+6 939 entreprises trouvées, 2 850 établissements actifs correspondants, 918 écartées pour opposition au registre,
+55 établissements secondaires, 23 réseaux ou plus de 19 salariés ; 1 854 gardées ; OSM : 36 lieux, 18 rapprochés,
+8 douteux ; 9 sites, 8 audités (dont 2 domaines morts, 1 page d'annuaire) ; 3 qualifiées, 1 741 à vérifier.
+278 appels Sirene, 1 appel Overpass, 7 appels Claude haiku ; 4 min 40. Cinq fiches tirées au hasard conformes à Sirene.
+
+**Conséquences.** Sans clé Google Places, la prospection trouve et vérifie les entreprises mais ne peut presque rien
+qualifier : la clé est la prochaine étape utile. Overpass public est souvent saturé (constaté) : un serveur Overpass local
+serait l'option si OSM devient important.
+
+## ADR-14 — Chaque site est unique : kit diversifié, élément sur mesure, registre et contrôle d'unicité (brief D, 2 nov. 2026)
+
+**Contexte.** Demande du propriétaire : « Il ne faut pas générer 2 fois le même site pour les clients, il faut que chacun soit
+unique. » Avec 3 variantes par section, 6 palettes fixes et 12 polices, deux électriciens voisins finissaient par se ressembler ;
+l'ancien anti-gabarit (couple accent/sombre et un critère sur trois différents) laissait passer des sites de même allure.
+
+**Choix.**
+- **Kit diversifié** (sans baisser les exigences) : 5 variantes de hero (photo, typo, scindé, panorama, encart), 5 de services
+  (cartes, liste, bandes, index, tuiles), 4 de preuve (colonnes, manifeste, étapes, encadré), 4 de réalisations (mosaïque, grille,
+  bande défilante sans JS, diptyque), 4 de zone (carte, liste, tableau des distances, bandeau), 4 de devis (scindé, encadré, plein,
+  appel) ; 3 en-têtes (simple, double, centré) et 3 pieds (complet, sobre, signature). Un composant par variante, trouvé par son nom
+  (`<Famille><Variante>.astro`). Descriptions pour le DA dans `src/catalogue.ts` (un test vérifie qu'aucune variante n'y manque).
+- **Mise en page indépendante du thème** (`theme.mise`, 8 axes) : échelle typographique, densité, traitement des photos (naturel,
+  franc, passe-partout, duotone, contraste), cadre, boutons, rythme des fonds, casse des titres, style des surtitres. Les titres passent
+  par des classes d'échelle (`.h1-hero`, `.titre-section`…), les photos par `.media`, les réglages par des attributs `data-*` sur `<html>`.
+- **Palettes générées** (`theme.palette`, `lib/palette.ts`) : teinte des neutres, teinte d'accent, vivacité, ton, fond, sombre → 14 jetons
+  calculés en OKLCH, chaque couleur de texte assombrie ou éclaircie par le code jusqu'aux seuils du kit. Les 13 608 combinaisons d'essai
+  passent AA (un test en vérifie plus de 1 000 à chaque lancement).
+- **27 polices auto-hébergées, 22 paires** classées par caractère (technique, net, robuste, éditorial, chaleureux, patrimoine,
+  contemporain) ; **12 signatures** (6 nouvelles : cotes, points, chevrons, briques, rayures, topo) et 2 cadres de plus (liseré, coin).
+- **Élément sur mesure** : le DA le conçoit dans `design.json > surMesure` (nom, composant, description aux 3 largeurs, textes à écrire,
+  pourquoi cette entreprise) et le place dans les sections (type `surmesure`) ; le Rédacteur écrit ses textes (dans `site.json`, vérifiés
+  comme le reste) ; l'Intégrateur le code dans `src/sections/custom/<Composant>.astro`. Étape normale de la recette (« Élément sur
+  mesure »), qui échoue si le fichier n'existe pas ; il passe ensuite tous les contrôles.
+- **Registre des sites** (`atelier/registre.ts`, table `registre_sites`) : empreinte de chaque site (métier, commune et coordonnées,
+  couleurs finales, polices et paire, rayon, signature, mise en page résolue, en-tête, pied, variantes et ordre, photos et photo du hero,
+  élément sur mesure, titres et phrases écrits, texte rendu). Inscription à chaque fabrication réussie (« à valider ») ; rattrapage
+  idempotent au démarrage du hub (exemples du kit + toutes les maquettes en base). Les maquettes d'une même entreprise ne se comparent
+  pas entre elles (ce sont des versions du même client).
+- **Les agents le lisent** : le brief écrit `unicite-design.json` (DA : empreintes des sites du même métier et de la zone de 30 km,
+  photos de hero, paires et teintes interdites) et `unicite-textes.json` (Rédacteur : titres et phrases des sites du même métier). Skill
+  `design/unicite-des-sites` hérité par le DA, le Rédacteur et l'Intégrateur. Ces fichiers sont protégés en écriture (ADR-12).
+- **Contrôle d'unicité bloquant** (`atelier/unicite.ts`, code pur) : à la sortie du DA (design seul), après l'assemblage (étape
+  « Unicité ») et à chaque passage des contrôles (« Unicité (contrôle) »).
+  - Distance de design = moyenne pondérée d'écarts par critère (accent 3 ; police des titres, variante du hero, ordre des sections 2 ;
+    sombre, signature, photo du hero 1,5 ; police du texte, variantes 1 ; mise en page 0,4 à 0,6 par axe ; en-tête, pied, fond 0,5 ;
+    rayon 0,4). Couleurs comparées en OKLab.
+  - Texte : 5-grammes de mots des textes écrits, nom de l'entreprise, communes et téléphone remplacés par des jetons (une phrase recyclée
+    avec un autre nom est repérée), n-grammes faits seulement de jetons ignorés (listes de communes) ; similarité de Jaccard.
+  - Règles strictes : photo du hero déjà employée par un site du même métier ou de la zone ; même paire de polices ou teinte d'accent
+    à moins de 25° (sans écart franc de luminosité) qu'un site du même métier dans la zone.
+  - Échec → renvoi au DA (design) ou au Rédacteur (texte) avec le site en conflit et les éléments trop proches, mot pour mot (passages
+    communs cités) ; deux renvois par agent pour cette cause (`max` du renvoi), puis arrêt.
+  - Photos : l'usage de chaque photo vient du registre ; une photo déjà en hero dans la zone ou le métier est retirée des candidates
+    hero du brief (`exclueHero`) et refusée en hero par le contrôle du design.
+  - Résultat dans `.atelier/unicite.json`, affiché sur l'écran du site : « Unicité : site le plus proche = X, distance d, similarité texte s ».
+- **Banque d'images** : 63 photos ajoutées (Unsplash/Pexels, crédits vérifiés, sans logo ni texte, matériel et toitures crédibles en
+  France) : électricien 21 (9 hero), plombier 17, chauffagiste 17, couvreur 18, menuisier 18, peintre 18.
+
+**Seuils et mesures** (calibrés sur les sites réels du registre au 2 nov. 2026) :
+
+Mesures sur les sites réels (distance de design de 0 = identique à 1 ; texte = Jaccard des 5-grammes) :
+
+| paire | relation | distance | texte |
+|---|---|---|---|
+| exemples du kit entre eux (électricien, plombier, couvreur) | autres métiers | 0,71 à 0,81 | 0,000 à 0,015 |
+| exemple électricien Villeurbanne ↔ 3 versions de Lumen Élec (ancienne chaîne) | même métier, 4 km | 0,60 à 0,64 | 0,013 à 0,018 |
+| 3 versions de Lumen Élec entre elles (même entreprise, même rédacteur) | — | 0,49 à 0,70 | 0,060 à 0,064 |
+| Ferrand ↔ Volt'Est, DA lancés en parallèle sans piste de départ (refusé) | même métier, 8 km | 0,416 | — |
+| Volt'Est ↔ Ferrand (version abandonnée de Ferrand, refusé) | même métier, 8 km | 0,481 | — |
+| premier texte de Ferrand ↔ Volt'Est / Lumen Élec (refusé, renvoyé au Rédacteur) | même métier | — | 0,055 / 0,044 |
+| **Volt'Est (Chassieu) ↔ Lumen Élec (Bron)** — maquettes finales | même métier, 4,5 km | **0,898** | **0,006** |
+| **Ferrand Électricité (Vénissieux) ↔ Lumen Élec** | même métier, 5,1 km | **0,980** | **0,015** |
+| **Ferrand Électricité ↔ Volt'Est** | même métier, 8,4 km | **0,984** | **0,010** |
+
+Les trois maquettes finales passent tous les contrôles : Lighthouse 100/100/100, axe 0 grave ; revue visuelle 4,17/5 (Volt'Est, 1 tour de
+correction) et 4/5 (Ferrand, 2 tours, après un « Refaire » : la première version s'était arrêtée à 3,83/5 sur des défauts des nouvelles
+variantes, corrigés dans le kit).
+
+Seuils retenus (recette `vitrine-artisan`) : distance ≥ **0,55** avec un site du même métier à moins de **30 km** (sous les 0,60 de deux
+sites jugés distincts par l'ancienne chaîne, au-dessus des 0,49 de deux versions trop proches d'une même entreprise) ; ≥ **0,45** même métier
+ailleurs ; ≥ **0,35** autre métier dans la zone ; texte ≤ **0,04** même métier (deux entreprises différentes : ≤ 0,021 ; un même rédacteur
+qui se recopie : 0,06) et ≤ **0,06** sinon ; teinte d'accent ≥ **25°** entre voisins du même métier.
+
+**Leçons des vraies fabrications** (2 électriciens fictifs près de Bron, en plus de Lumen Élec) :
+- Deux DA lancés en même temps, libres de tout choisir, ont composé presque le même site (mêmes variantes « nouvelles », en-tête, pied,
+  signature, une photo de hero de la même série et la même idée d'élément sur mesure). D'où : (1) un site entre au registre dès qu'il passe
+  le contrôle d'unicité (une fabrication parallèle s'y compare tout de suite) et en sort quand son DA repart d'un nouveau design ; (2) une
+  **piste de départ tirée au sort par le code** (`atelier/piste.ts`, graine = id du site, chaque choix pondéré pour s'écarter des sites proches,
+  teinte d'accent la plus éloignée) dont le DA part et peut s'écarter en le justifiant ; (3) deux photos de la même série (même nom sans
+  numéro) comptent comme la même photo de hero ; (4) deux noms d'élément sur mesure qui se recouvrent aux trois cinquièmes sont la même idée.
+- Les revues visuelles ont relevé des défauts des nouvelles variantes (tuile élargie à moitié vide, panneau du hero « encart » qui laissait
+  une bande vide, pastille non centrée, ligne d'appel cassée, interligne du nom géant en capitales) : corrigés dans le kit.
+- Une fabrication arrêtée par la limite de session de l'abonnement Claude reprend sans perte (« Reprendre »).
+
+**Conséquences.** Le nombre de combinaisons crédibles est très grand (5 heros × 5 services × 4 × 4 × 4 × 4 variantes, ordres,
+22 paires, 12 signatures, palettes continues, 8 axes de mise en page) et le code refuse ce qui ressemble trop à un site existant.
+Les anciens sites (sans `mise` ni `palette`) restent valides : valeurs par défaut. Limite : le registre compare des empreintes, pas des
+images ; deux sites très différents sur le papier mais proches à l'œil passeraient — la revue visuelle reste le garde-fou.

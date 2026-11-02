@@ -106,3 +106,11 @@ export function carteZone(zone: Zone): Carte {
   }
   return { largeur: L, hauteur: H, cx, cy, points, anneaux };
 }
+
+/** Distance à vol d'oiseau en km entre deux communes (haversine) ; null si une coordonnée manque. */
+export function distanceKm(a: { lat?: number; lon?: number }, b: { lat?: number; lon?: number }): number | null {
+  if (a.lat === undefined || a.lon === undefined || b.lat === undefined || b.lon === undefined) return null;
+  const r = (d: number) => (d * Math.PI) / 180;
+  const h = Math.sin(r(b.lat - a.lat) / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(r(b.lon - a.lon) / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.sqrt(h));
+}
