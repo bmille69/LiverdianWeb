@@ -1,0 +1,79 @@
+---
+/**
+ * Devis « scindé » : à gauche titre, intro et coordonnées directes (téléphone, email, horaires) ;
+ * à droite le formulaire dans une carte claire. Variante par défaut.
+ */
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, site, tel } from "../lib/site.ts";
+import { horairesFr } from "../lib/format.ts";
+import Section from "../components/Section.astro";
+import TitreSection from "../components/TitreSection.astro";
+import FormulaireDevis from "../components/FormulaireDevis.astro";
+import Icone from "../components/Icone.astro";
+interface Props {
+  section: SectionDe<"devis">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const e = site.entreprise;
+const horaires = horairesFr(e.horaires);
+---
+
+<Section id={id} fond={fond}>
+  <div class="conteneur grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+    <div>
+      <TitreSection id={id} surtitre={c.surtitre} titre={c.titre} intro={c.intro} />
+      <ul class="mt-10 space-y-5">
+        <li>
+          <a href={tel.lien} class="group flex items-center gap-4 no-underline">
+            <span class="grid size-12 shrink-0 place-items-center rounded-ui bg-accent text-sur-accent">
+              <Icone nom="phone" class="size-5" />
+            </span>
+            <span>
+              <span class="texte-doux block text-sm">Par téléphone, le plus rapide</span>
+              <span class="font-titres text-2xl tabular-nums group-hover:underline">{tel.affiche}</span>
+            </span>
+          </a>
+        </li>
+        {
+          e.email && (
+            <li>
+              <a href={`mailto:${e.email}`} class="group flex items-center gap-4 no-underline">
+                <span class="grid size-12 shrink-0 place-items-center rounded-ui border border-current/20">
+                  <Icone nom="mail" class="size-5" />
+                </span>
+                <span class="min-w-0">
+                  <span class="texte-doux block text-sm">Par email</span>
+                  <span class="block font-medium break-all group-hover:underline">{e.email}</span>
+                </span>
+              </a>
+            </li>
+          )
+        }
+        {
+          horaires.length > 0 && (
+            <li class="flex items-start gap-4">
+              <span class="grid size-12 shrink-0 place-items-center rounded-ui border border-current/20">
+                <Icone nom="clock" class="size-5" />
+              </span>
+              <span>
+                <span class="texte-doux block text-sm">Horaires</span>
+                {horaires.map((h) => (
+                  <span class="block">
+                    {h.jours}, {h.heures}
+                  </span>
+                ))}
+              </span>
+            </li>
+          )
+        }
+      </ul>
+    </div>
+    <div class="rounded-ui-l border border-trait bg-fond p-6 shadow-[0_30px_60px_-40px_rgb(0_0_0/0.35)] sm:p-9">
+      <FormulaireDevis contenu={c} />
+    </div>
+  </div>
+</Section>

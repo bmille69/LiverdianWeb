@@ -1,0 +1,55 @@
+---
+/**
+ * Appel « carte » : grande carte arrondie sur fond clair, image à gauche (facultative), appel à droite.
+ * Plus douce que la bande ; convient aux métiers « confort » (chauffage, menuiserie, peinture).
+ */
+import { Picture } from "astro:assets";
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, tel, ancreDevis, libelleDevis } from "../lib/site.ts";
+import { image } from "../lib/images.ts";
+import Section from "../components/Section.astro";
+import Icone from "../components/Icone.astro";
+interface Props {
+  section: SectionDe<"appel">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const img = image(c.image);
+---
+
+<Section id={id} fond={fond} class="py-12! md:py-20!">
+  <div class="conteneur">
+    <div class:list={["sur-sombre overflow-hidden rounded-ui-l bg-sombre text-sur-sombre", img && "grid md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]"]}>
+      {
+        img && (
+          <div class="relative aspect-[16/9] md:aspect-auto">
+            <Picture
+              src={img.src}
+              alt={img.alt}
+              widths={[480, 720, 960].filter((w) => w <= img.src.width)}
+              sizes="(min-width: 768px) 40vw, 100vw"
+              formats={["avif", "webp"]}
+              quality={58}
+              class="absolute inset-0 h-full w-full object-cover"
+              style={`object-position:${img.focale}`}
+            />
+          </div>
+        )
+      }
+      <div class="p-8 sm:p-10 lg:p-14">
+        <h2 id={`${id}-titre`} class="text-[1.875rem] leading-[1.12] md:text-[2.5rem]">{c.titre}</h2>
+        {c.texte && <p class="texte-doux mt-4 max-w-xl text-[1.0625rem]">{c.texte}</p>}
+        <div class="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <a href={tel.lien} class="btn btn-primaire h-14 px-6!">
+            <Icone nom="phone" class="size-5!" />
+            <span class="tabular-nums">{tel.affiche}</span>
+          </a>
+          <a href={ancreDevis} class="btn btn-secondaire h-14 px-6!">{libelleDevis}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</Section>

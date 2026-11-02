@@ -1,0 +1,12 @@
+{
+  "_doc": "Skills hérités par chaque agent. Chemins relatifs à skills/. Le hub copie ces dossiers dans .claude/skills du site pour Claude Code, et injecte leur contenu dans le prompt système pour les appels sans outils.",
+  "shared": ["_shared/regles-maison"],
+  "agents": {
+    "directeur": [],
+    "directeur-artistique": ["design/web-design-pro", "design/design-par-metier", "design/composition-vitrine-locale"],
+    "redacteur": ["copy/copywriting-artisan-local", "copy/seo-local", "copy/mentions-legales-fr"],
+    "integrateur": ["dev/astro-site-kit", "dev/performance-accessibilite", "design/web-design-pro", "copy/seo-local", "copy/mentions-legales-fr"],
+    "controleur-qa": ["qa/controle-faits", "qa/revue-visuelle", "dev/performance-accessibilite"],
+    "relecteur-ux": ["ux/heuristiques-ux-conversion", "design/web-design-pro", "qa/revue-visuelle"]
+  }
+}

@@ -1,0 +1,32 @@
+---
+/** Note Google réelle : chiffre + nombre d'avis + lien vers la fiche. Jamais de texte d'avis. */
+import { site } from "../lib/site.ts";
+import { noteFr } from "../lib/format.ts";
+import Etoiles from "./Etoiles.astro";
+interface Props {
+  class?: string;
+  clair?: boolean;
+}
+const { class: classe = "", clair = false } = Astro.props;
+const n = site.entreprise.noteGoogle;
+---
+
+{
+  n && (
+    <a
+      href={n.url}
+      rel="noopener"
+      target="_blank"
+      class:list={["group inline-flex items-center gap-3 rounded-ui py-1.5 no-underline", classe]}
+    >
+      <Etoiles note={n.valeur} class:list={["h-4 w-20 shrink-0", clair ? "text-accent-sur-sombre" : "text-accent-texte"]} />
+      <span class:list={["text-[0.9375rem] leading-tight", clair ? "text-sur-sombre" : "text-encre"]}>
+        <strong class="font-semibold">{noteFr(n.valeur)}/5</strong>{" "}
+        <span class:list={[clair ? "text-sur-sombre-doux" : "texte-doux", "underline decoration-1 underline-offset-4 decoration-current/40 group-hover:decoration-current"]}>
+          · {n.nombre} avis Google
+        </span>
+        <span class="sr-only"> (ouvre la fiche Google dans un nouvel onglet)</span>
+      </span>
+    </a>
+  )
+}

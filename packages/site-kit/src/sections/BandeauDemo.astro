@@ -1,0 +1,14 @@
+---
+/** Bandeau de maquette, non masquable, en haut de chaque page d'une démo. */
+import { site, nom } from "../lib/site.ts";
+import { dateLongue } from "../lib/format.ts";
+const d = site.demo;
+---
+
+<div data-bandeau-demo role="region" aria-label="Avertissement maquette" class="relative z-50 bg-encre text-fond">
+  <p class="conteneur py-2.5 text-center text-[0.8125rem] leading-snug sm:text-sm">
+    <span class="font-semibold">Maquette réalisée par {d.agenceUrl ? <a href={d.agenceUrl} class="underline underline-offset-2">{d.agence}</a> : d.agence} pour {nom}</span>, non officielle{
+      d.dateSuppression && <> — supprimée le {dateLongue(d.dateSuppression)}</>
+    }
+  </p>
+</div>

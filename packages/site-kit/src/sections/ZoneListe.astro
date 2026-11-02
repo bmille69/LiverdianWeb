@@ -1,0 +1,52 @@
+---
+/**
+ * Zone « liste » : la commune du siège en très grand, les communes voisines en liste typographique sur colonnes.
+ * Sans coordonnées nécessaires. Plus éditorial que la carte.
+ */
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, site, ancreDevis, tel } from "../lib/site.ts";
+import Section from "../components/Section.astro";
+import Surtitre from "../components/Surtitre.astro";
+import Icone from "../components/Icone.astro";
+interface Props {
+  section: SectionDe<"zone">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const z = site.zone;
+---
+
+<Section id={id} fond={fond} texture>
+  <div class="conteneur grid gap-12 lg:grid-cols-2 lg:gap-20">
+    <div>
+      <Surtitre texte={c.surtitre} />
+      <h2 id={`${id}-titre`} class="titre-section mt-4">{c.titre}</h2>
+      {c.intro && <p class="intro texte-doux mt-5">{c.intro}</p>}
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a href={tel.lien} class="btn btn-primaire"><Icone nom="phone" /> {tel.affiche}</a>
+        <a href={ancreDevis} class="btn btn-secondaire">Demander un devis</a>
+      </div>
+    </div>
+    <div>
+      <p class="flex items-center gap-3 border-b-2 border-current/15 pb-5">
+        <Icone nom="map-pin" class="size-7 texte-accent" />
+        <span class="font-titres text-[2.25rem] leading-none md:text-[2.75rem]">{z.commune.nom}</span>
+        <span class="texte-doux ml-auto text-sm">siège</span>
+      </p>
+      <ul class="mt-2 columns-2 gap-8 sm:columns-3 lg:columns-2 xl:columns-3">
+        {
+          z.voisines.map((v) => (
+            <li class="flex break-inside-avoid items-center gap-2.5 border-b border-current/10 py-3 text-[1.0625rem]">
+              <span aria-hidden="true" class="size-1.5 shrink-0 rounded-full bg-current opacity-50" />
+              {v.nom}
+            </li>
+          ))
+        }
+      </ul>
+      {z.precision && <p class="texte-doux mt-6 text-[0.9375rem]">{z.precision}</p>}
+    </div>
+  </div>
+</Section>

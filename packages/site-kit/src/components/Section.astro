@@ -1,0 +1,37 @@
+---
+/**
+ * Enveloppe commune des sections : ancre, aria-labelledby, fond (alternance calculée), texture signature facultative.
+ */
+import type { Fond } from "../lib/site.ts";
+import { theme } from "../lib/site.ts";
+import { motif } from "../lib/signatures.ts";
+interface Props {
+  id: string;
+  fond: Fond;
+  /** Affiche le motif signature en fond (discret). */
+  texture?: boolean;
+  class?: string;
+  /** Sans padding vertical standard (sections pleine hauteur). */
+  nu?: boolean;
+}
+const { id, fond, texture = false, class: classe = "", nu = false } = Astro.props;
+const sombre = fond === "sombre";
+const m = texture ? motif(theme.signature, sombre ? theme.couleurs.surSombre : theme.couleurs.encre, sombre ? 0.07 : 0.07) : null;
+---
+
+<section
+  id={id}
+  aria-labelledby={`${id}-titre`}
+  class:list={[`fond-${fond}`, sombre && "sur-sombre", !nu && "section", "relative isolate overflow-hidden", classe]}
+>
+  {
+    m && (
+      <div
+        aria-hidden="true"
+        class="pointer-events-none absolute inset-0 -z-10"
+        style={`background-image:${m.image};background-size:${m.taille};mask-image:linear-gradient(to bottom,#000,transparent 85%)`}
+      />
+    )
+  }
+  <slot />
+</section>

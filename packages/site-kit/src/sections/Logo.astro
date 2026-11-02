@@ -1,0 +1,26 @@
+---
+/** Logotype typographique : monogramme + nom + métier. Remplacé par le logo du client après signature. */
+import { site, nom } from "../lib/site.ts";
+import { initiales } from "../lib/format.ts";
+interface Props {
+  clair?: boolean;
+  class?: string;
+}
+const { clair = false, class: classe = "" } = Astro.props;
+---
+
+<a href="/" class:list={["group flex min-h-11 items-center gap-2.5 no-underline sm:gap-3", classe]}>
+  <span
+    aria-hidden="true"
+    class:list={[
+      "grid size-9 shrink-0 place-items-center sm:size-10 rounded-ui font-titres text-[0.95rem] font-bold tracking-tight",
+      clair ? "bg-accent-sur-sombre text-sombre" : "bg-sombre text-accent-sur-sombre",
+    ]}>{initiales(nom)}</span
+  >
+  <span class="flex min-w-0 flex-col leading-none">
+    <span class:list={["line-clamp-2 font-titres text-base leading-[1.1] font-bold tracking-tight sm:truncate sm:text-lg sm:leading-none", clair ? "text-sur-sombre" : "text-encre"]}>{nom}</span>
+    <span class:list={["mt-1 truncate text-[0.8125rem]", clair ? "text-sur-sombre-doux" : "text-encre-douce"]}>
+      {site.entreprise.metierLibelle}<span class="hidden sm:inline"> · {site.zone.commune.nom}</span>
+    </span>
+  </span>
+</a>

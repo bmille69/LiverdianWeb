@@ -1,0 +1,21 @@
+---
+/** Cinq étoiles remplies au prorata de la note (ex. 4,7 → 4 pleines + 70 %). Décoratif : la note est écrite à côté. */
+interface Props {
+  note: number;
+  class?: string;
+}
+const { note, class: classe = "h-5" } = Astro.props;
+const id = `et-${Math.round(note * 100)}-${Math.random().toString(36).slice(2, 7)}`;
+const largeur = (Math.max(0, Math.min(5, note)) / 5) * 120;
+const etoile = "M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4l-5.8 3.1 1.1-6.5L2.6 9.4l6.5-.9z";
+---
+
+<svg viewBox="0 0 120 24" class={classe} aria-hidden="true" focusable="false">
+  <defs>
+    <clipPath id={id}><rect width={largeur} height="24"></rect></clipPath>
+  </defs>
+  {[0, 1, 2, 3, 4].map((i) => <path d={etoile} transform={`translate(${i * 24} 0)`} fill="currentColor" opacity=".22" />)}
+  <g clip-path={`url(#${id})`}>
+    {[0, 1, 2, 3, 4].map((i) => <path d={etoile} transform={`translate(${i * 24} 0)`} fill="currentColor" />)}
+  </g>
+</svg>

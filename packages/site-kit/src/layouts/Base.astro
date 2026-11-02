@@ -1,0 +1,67 @@
+---
+/**
+ * Gabarit commun : <head> complet (SEO, Open Graph, favicon, theme-color, polices préchargées, jetons du thème),
+ * bandeau démo, en-tête, contenu, pied de page, barre d'action mobile.
+ */
+import "../styles/global.css";
+import { css as cssPolices, precharges } from "virtual:liverdian/polices";
+import { site, theme, demo } from "../lib/site.ts";
+import { variablesCss } from "../lib/theme.ts";
+import { jsonLd } from "../lib/seo.ts";
+import BandeauDemo from "../sections/BandeauDemo.astro";
+import Entete from "../sections/Entete.astro";
+import PiedDePage from "../sections/PiedDePage.astro";
+import BarreAction from "../sections/BarreAction.astro";
+
+interface Props {
+  titre: string;
+  description: string;
+  /** Chemin de la page (« / », « /mentions-legales/ »). */
+  chemin: string;
+  accueil?: boolean;
+}
+const { titre, description, chemin, accueil = false } = Astro.props;
+const base = site.seo.url;
+const canonique = base ? base + chemin : undefined;
+const ogImage = base ? `${base}/og.jpg` : "/og.jpg";
+---
+
+<!doctype html>
+<html lang="fr" data-signature={theme.signature}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{titre}</title>
+    <meta name="description" content={description} />
+    {demo ? <meta name="robots" content="noindex, nofollow" /> : <meta name="robots" content="index, follow" />}
+    {canonique && !demo && <link rel="canonical" href={canonique} />}
+    <meta name="theme-color" content={theme.couleurs.sombre} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    {precharges.map((u: string) => <link rel="preload" href={u} as="font" type="font/woff2" crossorigin />)}
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:title" content={titre} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    {canonique && <meta property="og:url" content={canonique} />}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="format-detection" content="telephone=no" />
+    <style is:inline set:html={variablesCss(theme) + cssPolices}></style>
+    {accueil && <script type="application/ld+json" is:inline set:html={JSON.stringify(jsonLd())} />}
+  </head>
+  <body class="min-h-dvh pb-[4.5rem] md:pb-0">
+    <a href="#contenu" class="sr-only-focusable fixed top-2 left-2 z-[60] rounded-ui bg-encre px-4 py-3 font-semibold text-fond">
+      Aller au contenu
+    </a>
+    {demo && <BandeauDemo />}
+    <Entete />
+    <main id="contenu">
+      <slot />
+    </main>
+    <PiedDePage />
+    <BarreAction />
+  </body>
+</html>

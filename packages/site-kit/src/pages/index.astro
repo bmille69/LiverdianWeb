@@ -1,0 +1,54 @@
+---
+/** Page d'accueil : les sections de site.json, dans l'ordre, avec la variante demandée. */
+import Base from "../layouts/Base.astro";
+import { site, fonds } from "../lib/site.ts";
+import { titreAccueil } from "../lib/seo.ts";
+import HeroPhoto from "../sections/HeroPhoto.astro";
+import HeroTypo from "../sections/HeroTypo.astro";
+import HeroScinde from "../sections/HeroScinde.astro";
+import ServicesCartes from "../sections/ServicesCartes.astro";
+import ServicesListe from "../sections/ServicesListe.astro";
+import ServicesBandes from "../sections/ServicesBandes.astro";
+import PourquoiColonnes from "../sections/PourquoiColonnes.astro";
+import PourquoiManifeste from "../sections/PourquoiManifeste.astro";
+import RealisationsMosaique from "../sections/RealisationsMosaique.astro";
+import RealisationsGrille from "../sections/RealisationsGrille.astro";
+import AvisBadge from "../sections/AvisBadge.astro";
+import AvisBandeau from "../sections/AvisBandeau.astro";
+import ZoneCarte from "../sections/ZoneCarte.astro";
+import ZoneListe from "../sections/ZoneListe.astro";
+import AppelBande from "../sections/AppelBande.astro";
+import AppelCarte from "../sections/AppelCarte.astro";
+import DevisScinde from "../sections/DevisScinde.astro";
+import DevisEncadre from "../sections/DevisEncadre.astro";
+
+const COMPOSANTS: Record<string, any> = {
+  "hero:photo": HeroPhoto,
+  "hero:typo": HeroTypo,
+  "hero:scinde": HeroScinde,
+  "services:cartes": ServicesCartes,
+  "services:liste": ServicesListe,
+  "services:bandes": ServicesBandes,
+  "pourquoi:colonnes": PourquoiColonnes,
+  "pourquoi:manifeste": PourquoiManifeste,
+  "realisations:mosaique": RealisationsMosaique,
+  "realisations:grille": RealisationsGrille,
+  "avis:badge": AvisBadge,
+  "avis:bandeau": AvisBandeau,
+  "zone:carte": ZoneCarte,
+  "zone:liste": ZoneListe,
+  "appel:bande": AppelBande,
+  "appel:carte": AppelCarte,
+  "devis:scinde": DevisScinde,
+  "devis:encadre": DevisEncadre,
+};
+---
+
+<Base titre={titreAccueil()} description={site.seo.description} chemin="/" accueil>
+  {
+    site.sections.map((section, i) => {
+      const Composant = COMPOSANTS[`${section.type}:${section.variante}`];
+      return <Composant section={section} fond={fonds[i]} />;
+    })
+  }
+</Base>

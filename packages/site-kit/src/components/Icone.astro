@@ -1,0 +1,46 @@
+---
+/**
+ * Icône Lucide (famille unique, trait 1.75) insérée en SVG inline au build. Décorative par défaut.
+ * Nom : celui de https://lucide.dev (ex. « zap », « wrench », « flame »).
+ */
+import fs from "node:fs";
+import { createRequire } from "node:module";
+import path from "node:path";
+
+interface Props {
+  nom: string;
+  class?: string;
+  trait?: number;
+  label?: string;
+}
+const { nom, class: classe = "size-6", trait = 1.75, label } = Astro.props;
+
+const require = createRequire(path.join(process.cwd(), "package.json"));
+let svg: string;
+try {
+  svg = fs.readFileSync(require.resolve(`lucide-static/icons/${nom}.svg`), "utf8");
+} catch {
+  throw new Error(`Icône « ${nom} » inconnue (voir https://lucide.dev/icons pour les noms valides).`);
+}
+const corps = svg
+  .replace(/<!--[\s\S]*?-->/g, "")
+  .replace(/^[\s\S]*?<svg[^>]*>/, "")
+  .replace(/<\/svg>\s*$/, "")
+  .replace(/\s*\n\s*/g, "");
+---
+
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width={trait}
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class={classe}
+  aria-hidden={label ? undefined : "true"}
+  role={label ? "img" : undefined}
+  aria-label={label}
+  focusable="false"
+  set:html={corps}
+/>

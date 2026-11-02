@@ -1,0 +1,130 @@
+---
+/**
+ * Formulaire de devis : 5 champs (nom, téléphone, commune, besoin, message), étiquettes visibles,
+ * autocomplétion, piège anti-spam (honeypot), ligne RGPD + lien.
+ * - Démo : n'envoie rien, affiche une explication (avec ou sans JavaScript).
+ * - Site livré : POST vers `formulaire.action` (site.json) ; amélioration progressive en fetch avec états d'envoi.
+ */
+import { site, demo, titresServices, nom } from "../lib/site.ts";
+import type { SectionDe } from "../schema.ts";
+import Icone from "./Icone.astro";
+interface Props {
+  contenu: SectionDe<"devis">["contenu"];
+  sombre?: boolean;
+}
+const { contenu: c, sombre = false } = Astro.props;
+const besoins = c.besoins ?? titresServices;
+const action = demo ? "#devis-demo" : site.formulaire.action;
+const champ = [
+  "mt-2 block w-full rounded-ui border px-4 text-[1.0625rem] text-encre transition-colors duration-150",
+  "border-encre/25 bg-surface placeholder:text-encre-douce/80 focus:border-accent-texte focus:outline-none focus:ring-2 focus:ring-accent-texte/30",
+];
+const etiquette = "block text-[0.9375rem] font-semibold";
+---
+
+<form
+  method={demo ? "get" : "post"}
+  action={action}
+  class="grid gap-5 sm:grid-cols-2"
+  data-devis
+  data-demo={demo ? "" : undefined}
+  data-sans-action={!demo && !action ? "" : undefined}
+  novalidate={false}
+>
+  <div>
+    <label for="f-nom" class={etiquette}>Nom</label>
+    <input id="f-nom" name="nom" type="text" autocomplete="name" required class:list={[champ, "h-13"]} />
+  </div>
+  <div>
+    <label for="f-tel" class={etiquette}>Téléphone</label>
+    <input id="f-tel" name="telephone" type="tel" inputmode="tel" autocomplete="tel" required class:list={[champ, "h-13"]} />
+  </div>
+  <div>
+    <label for="f-commune" class={etiquette}>Commune des travaux</label>
+    <input id="f-commune" name="commune" type="text" autocomplete="address-level2" class:list={[champ, "h-13"]} />
+  </div>
+  <div>
+    <label for="f-besoin" class={etiquette}>Votre besoin</label>
+    <div class="relative">
+      <select id="f-besoin" name="besoin" class:list={[champ, "h-13 appearance-none pr-11"]}>
+        {besoins.map((b) => <option>{b}</option>)}
+        <option>Autre demande</option>
+      </select>
+      <Icone nom="chevron-down" class="pointer-events-none absolute top-1/2 right-4 mt-1 size-5 -translate-y-1/2 text-encre-douce" />
+    </div>
+  </div>
+  <div class="sm:col-span-2">
+    <label for="f-message" class={etiquette}>Message <span class:list={["font-normal", sombre ? "text-sur-sombre-doux" : "texte-doux"]}>(facultatif)</span></label>
+    <textarea id="f-message" name="message" rows="4" class:list={[champ, "py-3 leading-relaxed"]}></textarea>
+  </div>
+  <!-- Piège anti-spam : invisible pour les humains, rempli par les robots. -->
+  <div aria-hidden="true" class="absolute -left-[9999px] h-px w-px overflow-hidden">
+    <label for="f-site">Ne pas remplir</label>
+    <input id="f-site" name="site_web" type="text" tabindex="-1" autocomplete="off" />
+  </div>
+  <div class="flex flex-col gap-4 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
+    <p class:list={["max-w-md text-sm", sombre ? "text-sur-sombre-doux" : "texte-doux"]}>
+      Vos informations servent uniquement à répondre à votre demande. <a href="/confidentialite/" class="underline underline-offset-2">Confidentialité</a>
+    </p>
+    <button type="submit" class="btn btn-primaire h-14 shrink-0 px-7!">
+      <span data-libelle>{c.boutonEnvoyer ?? "Envoyer la demande"}</span>
+      <Icone nom="send" />
+    </button>
+  </div>
+  <div id="devis-demo" role="status" aria-live="polite" data-devis-message class="devis-message rounded-ui border-l-4 border-accent bg-surface p-4 text-[0.9375rem] text-encre sm:col-span-2">
+    {
+      demo ? (
+        <p>
+          <strong>Ceci est une maquette :</strong> aucune demande n’est envoyée à {nom}. Sur le site final, ce formulaire transmettra
+          directement votre demande à l’entreprise.
+        </p>
+      ) : (
+        <p data-texte />
+      )
+    }
+  </div>
+</form>
+
+<style>
+  .devis-message {
+    display: none;
+  }
+  .devis-message:target,
+  .devis-message.visible {
+    display: block;
+  }
+</style>
+
+<script is:inline>
+  (() => {
+    const f = document.querySelector("[data-devis]");
+    if (!f) return;
+    const msg = f.querySelector("[data-devis-message]");
+    const montrer = (texte) => {
+      if (texte) msg.querySelector("[data-texte]").textContent = texte;
+      msg.classList.add("visible");
+      msg.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    };
+    f.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!f.reportValidity()) return;
+      if (f.hasAttribute("data-demo")) return montrer();
+      const b = f.querySelector("button[type=submit]");
+      const lib = b.querySelector("[data-libelle]");
+      const initial = lib.textContent;
+      b.disabled = true;
+      lib.textContent = "Envoi en cours…";
+      try {
+        const r = await fetch(f.action, { method: "POST", body: new FormData(f), headers: { Accept: "application/json" } });
+        if (!r.ok) throw new Error(String(r.status));
+        f.reset();
+        montrer("Merci, votre demande est bien envoyée. Vous serez recontacté par téléphone.");
+      } catch {
+        montrer("L’envoi n’a pas abouti. Réessayez, ou appelez-nous directement : c’est souvent le plus rapide.");
+      } finally {
+        b.disabled = false;
+        lib.textContent = initial;
+      }
+    });
+  })();
+</script>

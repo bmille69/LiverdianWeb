@@ -1,0 +1,84 @@
+---
+/**
+ * Réalisations « mosaïque » : grande image + vignettes en grille asymétrique (4 colonnes bureau, 2 mobile),
+ * légendes en étiquette. Pour 3 à 8 images. Disposition calculée pour remplir les rangées sans trou.
+ */
+import { Picture } from "astro:assets";
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, demo } from "../lib/site.ts";
+import { imageRequise } from "../lib/images.ts";
+import Section from "../components/Section.astro";
+import TitreSection from "../components/TitreSection.astro";
+interface Props {
+  section: SectionDe<"realisations">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const n = c.images.length;
+
+/** Largeur (colonnes sur 4) de chaque vignette après la grande image (2×2). */
+function portees(total: number): number[] {
+  const reste = total - 1;
+  const p: number[] = [];
+  // Rangées 1-2 à droite de la grande image : 4 cellules.
+  const haut = Math.min(reste, 4);
+  if (haut === 1) p.push(2);
+  else if (haut === 2) p.push(2, 2);
+  else if (haut === 3) p.push(2, 1, 1);
+  else if (haut === 4) p.push(1, 1, 1, 1);
+  const bas = reste - haut;
+  if (bas === 1) p.push(4);
+  else if (bas === 2) p.push(2, 2);
+  else if (bas === 3) p.push(2, 1, 1);
+  return p;
+}
+const p = portees(n);
+const COL: Record<number, string> = { 1: "md:col-span-1", 2: "md:col-span-2", 4: "md:col-span-4 md:aspect-[3/1]" };
+---
+
+<Section id={id} fond={fond}>
+  <div class="conteneur">
+    <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+      <TitreSection id={id} surtitre={c.surtitre} titre={c.titre} intro={c.intro} />
+      {demo && <p class="texte-doux max-w-xs text-sm md:text-right">Photos d’illustration : elles seront remplacées par vos chantiers.</p>}
+    </div>
+    <ul class="mt-12 grid grid-cols-2 gap-3 sm:gap-4 md:mt-16 md:auto-rows-[15rem] md:grid-cols-4 lg:auto-rows-[17rem]">
+      {
+        c.images.map((it, i) => {
+          const img = imageRequise(it.image);
+          const grande = i === 0;
+          const derniereSeule = !grande && i === n - 1 && (n - 1) % 2 === 1;
+          return (
+            <li
+              class:list={[
+                "group relative overflow-hidden rounded-ui-l bg-teinte",
+                grande ? "col-span-2 aspect-[4/3] md:row-span-2 md:aspect-auto" : "aspect-square md:aspect-auto",
+                derniereSeule && "max-md:col-span-2 max-md:aspect-[2/1]",
+                !grande && COL[p[i - 1] ?? 1],
+              ]}
+            >
+              <Picture
+                src={img.src}
+                alt={img.alt}
+                widths={(grande ? [640, 960, 1280, 1600] : [400, 640, 960]).filter((w) => w <= img.src.width)}
+                sizes={grande ? "(min-width: 768px) 50vw, 100vw" : "(min-width: 768px) 25vw, 50vw"}
+                formats={["avif", "webp"]}
+                quality={58}
+                class="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+                style={`object-position:${img.focale}`}
+              />
+              {it.legende && (
+                <p class:list={[!grande && "max-lg:hidden", "absolute bottom-3 left-3 max-w-[calc(100%-1.5rem)] rounded-ui bg-sombre/85 px-3 py-1.5 text-[0.8125rem] leading-snug font-medium text-sur-sombre backdrop-blur-sm"]}>
+                  {it.legende}
+                </p>
+              )}
+            </li>
+          );
+        })
+      }
+    </ul>
+  </div>
+</Section>

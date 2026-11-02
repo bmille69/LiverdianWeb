@@ -1,0 +1,36 @@
+---
+/**
+ * Devis « encadré » : section sombre, titre centré, formulaire dans une carte claire centrée,
+ * téléphone rappelé au-dessus. Plus solennel ; bonne fin de page avant un pied de page clair.
+ */
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, tel } from "../lib/site.ts";
+import Section from "../components/Section.astro";
+import TitreSection from "../components/TitreSection.astro";
+import FormulaireDevis from "../components/FormulaireDevis.astro";
+import Icone from "../components/Icone.astro";
+interface Props {
+  section: SectionDe<"devis">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+---
+
+<Section id={id} fond={fond} texture>
+  <div class="conteneur">
+    <TitreSection id={id} surtitre={c.surtitre} titre={c.titre} intro={c.intro} centre>
+      <p class="mt-6">
+        <a href={tel.lien} class="lien inline-flex min-h-11 items-center gap-2 text-lg">
+          <Icone nom="phone" class="size-5" />
+          Ou appelez directement le <span class="tabular-nums">{tel.affiche}</span>
+        </a>
+      </p>
+    </TitreSection>
+    <div class="sur-clair mx-auto mt-12 max-w-3xl rounded-ui-l bg-fond p-6 text-encre shadow-[0_40px_80px_-40px_rgb(0_0_0/0.6)] sm:p-10">
+      <FormulaireDevis contenu={c} />
+    </div>
+  </div>
+</Section>

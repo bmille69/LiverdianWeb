@@ -1,0 +1,40 @@
+---
+/**
+ * Cadre d'image selon la signature du thème : équerres (technique), décalé (aplat de couleur derrière),
+ * arche (haut cintré), simple. Le contenu (une <Picture>) remplit le cadre.
+ */
+import { theme } from "../lib/site.ts";
+import { cadre } from "../lib/signatures.ts";
+interface Props {
+  class?: string;
+  sombre?: boolean;
+  type?: ReturnType<typeof cadre>;
+}
+const { class: classe = "", sombre = false, type = cadre(theme.signature) } = Astro.props;
+---
+
+<div class:list={["relative", classe, type === "decale" && "pr-3 pb-3 sm:pr-5 sm:pb-5"]}>
+  {
+    type === "decale" && (
+      <div aria-hidden="true" class:list={["absolute inset-0 top-5 left-5 rounded-ui-l sm:top-8 sm:left-8", sombre ? "bg-accent-sur-sombre/25" : "bg-accent/20"]} />
+    )
+  }
+  <div
+    class:list={[
+      "relative h-full overflow-hidden",
+      type === "arche" ? "rounded-t-[999px] rounded-b-ui" : "rounded-ui-l",
+    ]}
+  >
+    <slot />
+  </div>
+  {
+    type === "equerres" && (
+      <div aria-hidden="true" class:list={["pointer-events-none absolute -inset-2.5 sm:-inset-3.5", sombre ? "text-accent-sur-sombre" : "text-accent-texte"]}>
+        <span class="absolute top-0 left-0 h-6 w-6 border-t-2 border-l-2 border-current" />
+        <span class="absolute top-0 right-0 h-6 w-6 border-t-2 border-r-2 border-current" />
+        <span class="absolute bottom-0 left-0 h-6 w-6 border-b-2 border-l-2 border-current" />
+        <span class="absolute right-0 bottom-0 h-6 w-6 border-r-2 border-b-2 border-current" />
+      </div>
+    )
+  }
+</div>

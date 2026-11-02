@@ -1,0 +1,44 @@
+---
+/** Boutons du hero : Appeler (primaire, numéro visible) + Demander un devis (secondaire), puis note et repères. */
+import { site, tel, ancreDevis, libelleDevis } from "../lib/site.ts";
+import type { SectionDe } from "../schema.ts";
+import Icone from "./Icone.astro";
+import NoteGoogle from "./NoteGoogle.astro";
+interface Props {
+  contenu: SectionDe<"hero">["contenu"];
+  clair?: boolean;
+  class?: string;
+}
+const { contenu: c, clair = false, class: classe = "" } = Astro.props;
+const note = c.afficherNote && site.entreprise.noteGoogle;
+---
+
+<div class={classe}>
+  <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+    <a href={tel.lien} class="btn btn-primaire h-14 px-6! text-[1.0625rem]">
+      <Icone nom="phone" class="size-5!" />
+      <span>{c.boutonAppel ?? "Appeler le"} <span class="tabular-nums">{tel.affiche}</span></span>
+    </a>
+    <a href={ancreDevis} class:list={["btn btn-secondaire h-14 px-6! text-[1.0625rem]", clair && "sur-photo"]}>
+      {c.boutonDevis ?? libelleDevis}
+      <Icone nom="arrow-right" />
+    </a>
+  </div>
+  {
+    (note || c.reperes?.length) && (
+      <ul class:list={["mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 text-[0.9375rem]", clair ? "text-sur-sombre" : "text-encre"]}>
+        {note && (
+          <li>
+            <NoteGoogle clair={clair} />
+          </li>
+        )}
+        {c.reperes?.map((r) => (
+          <li class="flex items-center gap-2">
+            <Icone nom="check" class:list={["size-[1.125rem]", clair ? "text-accent-sur-sombre" : "text-accent-texte"]} trait={2.25} />
+            {r}
+          </li>
+        ))}
+      </ul>
+    )
+  }
+</div>

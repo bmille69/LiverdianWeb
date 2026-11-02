@@ -1,0 +1,63 @@
+---
+/**
+ * Pourquoi nous « manifeste » : fond sombre, grande phrase-titre à gauche (avec image facultative),
+ * arguments numérotés à droite. Donne du caractère ; casse le rythme après des sections claires.
+ */
+import { Picture } from "astro:assets";
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre } from "../lib/site.ts";
+import { image } from "../lib/images.ts";
+import Section from "../components/Section.astro";
+import Surtitre from "../components/Surtitre.astro";
+import Cadre from "../components/Cadre.astro";
+interface Props {
+  section: SectionDe<"pourquoi">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const img = image(c.image);
+---
+
+<Section id={id} fond={fond} texture>
+  <div class="conteneur grid gap-14 lg:grid-cols-2 lg:gap-20">
+    <div>
+      <Surtitre texte={c.surtitre} />
+      <h2 id={`${id}-titre`} class="mt-4 text-[2.25rem] leading-[1.06] md:text-[3rem] lg:text-[3.5rem]">{c.titre}</h2>
+      {c.intro && <p class="intro texte-doux mt-6">{c.intro}</p>}
+      {
+        img && (
+          <Cadre class="mt-12 hidden aspect-[3/2] lg:block" sombre={fond === "sombre"}>
+            <Picture
+              src={img.src}
+              alt={img.alt}
+              widths={[480, 720, 960, 1200].filter((w) => w <= img.src.width)}
+              sizes="(min-width: 1280px) 560px, 45vw"
+              formats={["avif", "webp"]}
+              quality={60}
+              class="h-full w-full object-cover"
+              style={`object-position:${img.focale}`}
+            />
+          </Cadre>
+        )
+      }
+    </div>
+    <ol class="self-center">
+      {
+        c.items.map((it, i) => (
+          <li class:list={["grid grid-cols-[3.5rem_minmax(0,1fr)] gap-4 py-8", i > 0 && "border-t border-current/12"]}>
+            <span aria-hidden="true" class="font-titres text-[2rem] leading-none texte-accent tabular-nums">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <div>
+              <h3 class="text-xl md:text-2xl">{it.titre}</h3>
+              <p class="texte-doux mt-2.5 leading-relaxed">{it.texte}</p>
+            </div>
+          </li>
+        ))
+      }
+    </ol>
+  </div>
+</Section>

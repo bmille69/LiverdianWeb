@@ -1,0 +1,54 @@
+---
+/**
+ * Appel « bande » : bande d'appel pleine largeur (sombre), titre court + gros bouton téléphone.
+ * À placer entre deux sections longues pour relancer l'action. Image facultative en fond très voilé.
+ */
+import { Picture } from "astro:assets";
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, tel, ancreDevis, libelleDevis } from "../lib/site.ts";
+import { image } from "../lib/images.ts";
+import Section from "../components/Section.astro";
+import Icone from "../components/Icone.astro";
+interface Props {
+  section: SectionDe<"appel">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const img = image(c.image);
+---
+
+<Section id={id} fond={fond} texture={!img} class="py-16! md:py-24!">
+  {
+    img && (
+      <>
+        <Picture
+          src={img.src}
+          alt=""
+          widths={[640, 1280, 1920].filter((w) => w <= img.src.width)}
+          sizes="100vw"
+          formats={["avif", "webp"]}
+          quality={50}
+          class="absolute inset-0 -z-20 h-full w-full object-cover"
+          style={`object-position:${img.focale}`}
+        />
+        <div aria-hidden="true" class="absolute inset-0 -z-10 bg-sombre/88" />
+      </>
+    )
+  }
+  <div class="conteneur flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+    <div class="max-w-2xl">
+      <h2 id={`${id}-titre`} class="text-[2rem] leading-[1.1] md:text-[2.75rem]">{c.titre}</h2>
+      {c.texte && <p class="texte-doux mt-4 text-[1.0625rem]">{c.texte}</p>}
+    </div>
+    <div class="flex flex-col gap-3 sm:flex-row">
+      <a href={tel.lien} class="btn btn-primaire h-14 px-7! text-lg">
+        <Icone nom="phone" class="size-5!" />
+        <span class="tabular-nums">{tel.affiche}</span>
+      </a>
+      <a href={ancreDevis} class="btn btn-secondaire h-14 px-6!">{libelleDevis}</a>
+    </div>
+  </div>
+</Section>

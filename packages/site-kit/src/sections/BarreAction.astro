@@ -1,0 +1,12 @@
+---
+/** Barre d'action fixe en bas d'écran sur mobile : Appeler (primaire) / Devis. Le <body> réserve sa hauteur. */
+import { tel, ancreDevis } from "../lib/site.ts";
+import Icone from "../components/Icone.astro";
+---
+
+<nav aria-label="Actions rapides" class="fixed inset-x-0 bottom-0 z-40 border-t border-trait bg-fond/95 backdrop-blur-sm md:hidden">
+  <div class="conteneur grid grid-cols-2 gap-2.5 py-2.5" style="padding-bottom: max(0.625rem, env(safe-area-inset-bottom))">
+    <a href={tel.lien} class="btn btn-primaire w-full"><Icone nom="phone" /> Appeler</a>
+    <a href={ancreDevis} class="btn btn-secondaire w-full bg-surface"><Icone nom="file-text" /> Devis</a>
+  </div>
+</nav>

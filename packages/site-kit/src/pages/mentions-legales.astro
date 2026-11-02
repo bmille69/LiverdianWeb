@@ -1,0 +1,71 @@
+---
+/**
+ * Mentions légales (LCEN art. 6) générées depuis site.json.
+ * Champ obligatoire absent : « [À COMPLÉTER : …] » sur un site livré (bloque la mise en ligne),
+ * « non communiqué (maquette) » sur une démo.
+ */
+import PageLegale from "../layouts/PageLegale.astro";
+import { site, nom, tel, demo } from "../lib/site.ts";
+import { sirenFr } from "../lib/format.ts";
+
+const e = site.entreprise;
+const l = site.legal;
+const manque = (quoi: string) => (demo ? "non communiqué (maquette)" : `[À COMPLÉTER : ${quoi}]`);
+const hebergeur = l.hebergeur ?? {
+  nom: "Cloudflare, Inc.",
+  adresse: "101 Townsend St, San Francisco, CA 94107, États-Unis",
+  telephone: "+1 650 319 8930",
+  url: "https://www.cloudflare.com",
+};
+const registre = e.rm ?? e.rcs;
+const agenceUrl = site.demo.agenceUrl ?? "https://liverdian.fr";
+---
+
+<PageLegale titre="Mentions légales" description={`Mentions légales du site de ${nom}, ${site.entreprise.metierLibelle.toLowerCase()} à ${site.zone.commune.nom} : éditeur, hébergeur, propriété intellectuelle.`} chemin="/mentions-legales/">
+  <h2>Éditeur du site</h2>
+  <dl>
+    <dt>Raison sociale</dt>
+    <dd>{e.raisonSociale}{e.nomCommercial && e.nomCommercial !== e.raisonSociale && <>, nom commercial « {e.nomCommercial} »</>}</dd>
+    <dt>Forme juridique</dt>
+    <dd>{e.formeJuridique ?? manque("forme juridique")}{e.capital && <>, au capital de {e.capital}</>}</dd>
+    <dt>Siège</dt>
+    <dd>{e.adresse.rue}, {e.adresse.codePostal} {e.adresse.commune}</dd>
+    <dt>Téléphone</dt>
+    <dd><a href={tel.lien}>{tel.affiche}</a></dd>
+    <dt>Email</dt>
+    <dd>{e.email ? <a href={`mailto:${e.email}`}>{e.email}</a> : manque("adresse email")}</dd>
+    <dt>SIREN{e.siret && " / SIRET"}</dt>
+    <dd>{sirenFr(e.siren)}{e.siret && <> / {e.siret}</>}</dd>
+    <dt>Immatriculation</dt>
+    <dd>{registre ?? manque("n° RCS ou RM")}</dd>
+    {
+      e.tva && (
+        <>
+          <dt>TVA intracommunautaire</dt>
+          <dd>{e.tva}</dd>
+        </>
+      )
+    }
+    <dt>Directeur de la publication</dt>
+    <dd>{l.directeurPublication ?? e.dirigeant ?? manque("directeur de la publication")}</dd>
+  </dl>
+  {l.assurance && (<><h2>Assurance professionnelle</h2><p>{l.assurance}</p></>)}
+  {l.mediateur && (<><h2>Médiation de la consommation</h2><p>{l.mediateur}</p></>)}
+
+  <h2>Hébergeur</h2>
+  <p>
+    {hebergeur.nom}, {hebergeur.adresse}{hebergeur.telephone && <>, {hebergeur.telephone}</>}{hebergeur.url && <> — <a href={hebergeur.url}>{hebergeur.url.replace(/^https?:\/\//, "")}</a></>}.
+  </p>
+
+  <h2>Réalisation</h2>
+  <p>Site conçu et réalisé par <a href={agenceUrl}>{site.demo.agence}</a>.</p>
+
+  <h2>Propriété intellectuelle</h2>
+  <p>
+    Les textes, la mise en page et les éléments graphiques de ce site sont protégés. Toute reproduction sans autorisation de {e.raisonSociale} est interdite.
+    {demo && " Les photographies sont des images d’illustration libres de droits (Unsplash, Pexels)."}
+  </p>
+
+  <h2>Données personnelles</h2>
+  <p>Le traitement des informations envoyées par le formulaire est décrit dans la <a href="/confidentialite/">politique de confidentialité</a>. Ce site n’utilise aucun cookie ni traceur.</p>
+</PageLegale>

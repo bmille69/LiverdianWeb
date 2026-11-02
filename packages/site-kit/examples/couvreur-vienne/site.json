@@ -1,0 +1,177 @@
+{
+  "version": 1,
+  "slug": "desgranges-couverture",
+  "entreprise": {
+    "raisonSociale": "DESGRANGES THOMAS",
+    "nomCommercial": "Desgranges Couverture",
+    "metier": "couvreur",
+    "metierLibelle": "Couvreur",
+    "naf": "43.91B",
+    "siren": "530 418 962",
+    "siret": "530 418 962 00027",
+    "formeJuridique": "Entrepreneur individuel",
+    "rm": "RM 530 418 962 (Isère)",
+    "adresse": { "rue": "5 chemin des Tuileries", "codePostal": "38200", "commune": "Vienne" },
+    "telephone": "04 65 71 90 36",
+    "email": "thomas@desgranges-couverture.example",
+    "horaires": [
+      { "jours": ["lu", "ma", "me", "je", "ve"], "ouverture": "07:30", "fermeture": "12:00" },
+      { "jours": ["lu", "ma", "me", "je", "ve"], "ouverture": "13:30", "fermeture": "17:30" }
+    ],
+    "horairesNote": "Visites de toiture possibles le samedi matin, sur rendez-vous.",
+    "noteGoogle": { "valeur": 4.7, "nombre": 29, "url": "https://www.google.com/maps?cid=1000000000000000003" },
+    "dateCreation": "2011-05-01",
+    "dirigeant": "Thomas Desgranges"
+  },
+  "zone": {
+    "commune": { "nom": "Vienne", "lat": 45.5255, "lon": 4.8747 },
+    "voisines": [
+      { "nom": "Chasse-sur-Rhône", "lat": 45.58, "lon": 4.8 },
+      { "nom": "Chuzelles", "lat": 45.585, "lon": 4.8783 },
+      { "nom": "Seyssuet", "lat": 45.56, "lon": 4.8433 },
+      { "nom": "Pont-Évêque", "lat": 45.5317, "lon": 4.91 },
+      { "nom": "Estrablin", "lat": 45.515, "lon": 4.96 },
+      { "nom": "Saint-Romain-en-Gal", "lat": 45.5333, "lon": 4.8617 },
+      { "nom": "Jardin", "lat": 45.495, "lon": 4.9 },
+      { "nom": "Reventin-Vaugris", "lat": 45.4683, "lon": 4.84 }
+    ]
+  },
+  "theme": { "preset": "couvreur" },
+  "images": {
+    "hero": {
+      "fichier": "stock/couvreur/couvreur-au-travail-01.jpg",
+      "alt": "Couvreur posant des tuiles en terre cuite sur un toit en réfection",
+      "focale": "50% 30%"
+    },
+    "reparation": { "fichier": "stock/couvreur/renovation-toiture-01.jpg", "alt": "Toit ancien en rénovation avec cheminée en pierre et échelle", "focale": "50% 35%" },
+    "refection": { "fichier": "stock/couvreur/tuiles-liteaux-01.jpg", "alt": "Tuiles plates posées sur des liteaux de bois neufs", "focale": "50% 60%" },
+    "entretien": { "fichier": "stock/couvreur/tuiles-canal-01.jpg", "alt": "Toiture en tuiles canal aux nuances de terre cuite" },
+    "village": { "fichier": "stock/couvreur/toits-tuiles-canal-01.jpg", "alt": "Maisons aux toits de tuiles canal et volets colorés", "focale": "50% 60%" },
+    "rangs": { "fichier": "stock/couvreur/tuiles-canal-02.jpg", "alt": "Rangées régulières de tuiles rondes en terre cuite" },
+    "pose": { "fichier": "stock/couvreur/pose-tuiles-01.jpg", "alt": "Pose de tuiles plates sur liteaux neufs", "focale": "50% 70%" },
+    "anciennes": { "fichier": "stock/couvreur/tuiles-anciennes-01.jpg", "alt": "Toiture en tuiles mécaniques patinées par le temps" },
+    "ferme": { "fichier": "stock/maison/ferme-pierre-01.jpg", "alt": "Ferme en pierre aux toits de tuiles autour d'une cour", "focale": "60% 50%" },
+    "chantier": { "fichier": "stock/couvreur/couvreurs-chantier-01.jpg", "alt": "Deux couvreurs posant des tuiles sur une toiture neuve" }
+  },
+  "entete": { "variante": "simple", "boutonDevis": "Demander un devis" },
+  "sections": [
+    {
+      "type": "hero",
+      "variante": "scinde",
+      "contenu": {
+        "surtitre": "Couvreur · Pays viennois",
+        "titre": "Couvreur à Vienne, de la tuile à la gouttière",
+        "titreAccent": "de la tuile à la gouttière",
+        "sousTitre": "Thomas Desgranges entretient, répare et refait les toitures du pays viennois depuis 2011. Une tuile déplacée après un coup de vent ? Appelez.",
+        "image": "hero",
+        "afficherNote": true,
+        "reperes": ["Installé à Vienne depuis 2011", "Tuiles canal, plates et mécaniques"]
+      }
+    },
+    {
+      "type": "services",
+      "variante": "bandes",
+      "contenu": {
+        "surtitre": "Savoir-faire",
+        "titre": "Trois façons de prendre soin d'un toit",
+        "intro": "Chaque visite commence en hauteur : on regarde l'état réel de la couverture avant de proposer quoi que ce soit.",
+        "items": [
+          {
+            "titre": "Réparation et fuites",
+            "image": "reparation",
+            "texte": "Une auréole au plafond, une tuile glissée, un faîtage qui se descelle : on cherche l'origine de l'infiltration et on répare ce qui doit l'être, sans refaire tout le toit.",
+            "points": ["Tuiles cassées remplacées", "Faîtage et rives rescellés", "Solins de cheminée repris"]
+          },
+          {
+            "titre": "Réfection complète",
+            "image": "refection",
+            "texte": "Quand les tuiles deviennent poreuses et les liteaux fatigués : dépose, écran sous-toiture, liteaux neufs et tuiles adaptées à la maison et à son époque.",
+            "points": ["Écran sous-toiture", "Liteaux et contre-liteaux", "Tuiles canal, plates ou mécaniques"]
+          },
+          {
+            "titre": "Entretien et gouttières",
+            "image": "entretien",
+            "texte": "Démoussage, nettoyage des chéneaux, contrôle après les épisodes de vent du couloir rhodanien : de quoi allonger la vie d'une toiture saine.",
+            "points": ["Démoussage manuel", "Gouttières et descentes", "Contrôle après tempête"]
+          }
+        ]
+      }
+    },
+    {
+      "type": "pourquoi",
+      "variante": "colonnes",
+      "contenu": {
+        "surtitre": "L'entreprise",
+        "titre": "Un couvreur seul en charge de votre chantier, du devis au dernier rang de tuiles",
+        "items": [
+          {
+            "titre": "Un seul interlocuteur",
+            "icone": "user-round",
+            "texte": "Thomas Desgranges établit le devis, monte sur le toit et suit le chantier. Vous savez toujours à qui parler."
+          },
+          {
+            "titre": "Le bâti d'ici",
+            "icone": "house",
+            "texte": "Tuiles canal des maisons de vignerons, tuiles mécaniques des villas d'entre-deux-guerres : chaque toit garde les matériaux qui lui vont."
+          },
+          {
+            "titre": "Des devis détaillés",
+            "icone": "file-text",
+            "texte": "Chaque poste est chiffré séparément : dépose, fournitures, main-d'œuvre. Vous savez ce que vous payez, et pourquoi."
+          }
+        ]
+      }
+    },
+    {
+      "type": "realisations",
+      "variante": "mosaique",
+      "contenu": {
+        "surtitre": "Toitures",
+        "titre": "Tuile canal, tuile plate, tuile mécanique",
+        "images": [
+          { "image": "village", "legende": "Couvertures en tuiles canal" },
+          { "image": "pose", "legende": "Pose sur liteaux neufs" },
+          { "image": "rangs", "legende": "Alignement des rangs" },
+          { "image": "chantier", "legende": "Réfection à deux couvreurs" },
+          { "image": "anciennes", "legende": "Tuiles mécaniques patinées" }
+        ]
+      }
+    },
+    {
+      "type": "appel",
+      "variante": "carte",
+      "contenu": {
+        "titre": "Un doute après un coup de vent ?",
+        "texte": "Une visite suffit pour voir l'état réel de la toiture. Thomas vous dit ce qui presse et ce qui peut attendre.",
+        "image": "ferme"
+      }
+    },
+    {
+      "type": "zone",
+      "variante": "carte",
+      "contenu": {
+        "surtitre": "Secteur",
+        "titre": "Vienne et le pays viennois",
+        "intro": "Depuis Vienne, les chantiers se font des deux côtés du Rhône, de Chasse-sur-Rhône au nord jusqu'à Reventin-Vaugris au sud."
+      }
+    },
+    {
+      "type": "devis",
+      "variante": "scinde",
+      "contenu": {
+        "surtitre": "Devis",
+        "titre": "Parlons de votre toit",
+        "intro": "Indiquez la commune et ce que vous avez constaté (tuile déplacée, tache au plafond, mousse). Thomas Desgranges vous rappelle pour convenir d'une visite.",
+        "besoins": ["Réparation ou fuite", "Réfection complète", "Entretien, démoussage", "Gouttières"]
+      }
+    }
+  ],
+  "pied": {
+    "variante": "complet",
+    "phrase": "Couverture, réparation et entretien de toitures en tuiles à Vienne et dans le pays viennois."
+  },
+  "seo": {
+    "description": "Couvreur à Vienne (Isère) : réparation de fuites, réfection de toiture en tuiles, démoussage et gouttières. Desgranges Couverture intervient dans le pays viennois."
+  },
+  "demo": { "actif": true, "agence": "Liverdian", "dateSuppression": "2026-12-02" }
+}

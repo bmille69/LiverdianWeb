@@ -1,0 +1,74 @@
+---
+/**
+ * Services « liste » : liste éditoriale détaillée, une ligne par prestation (numéro, titre, texte, points).
+ * Image facultative à côté (celle du premier service). Pour 2 à 5 prestations bien décrites.
+ */
+import { Picture } from "astro:assets";
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre } from "../lib/site.ts";
+import { image } from "../lib/images.ts";
+import Section from "../components/Section.astro";
+import TitreSection from "../components/TitreSection.astro";
+import Icone from "../components/Icone.astro";
+import Cadre from "../components/Cadre.astro";
+interface Props {
+  section: SectionDe<"services">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const visuel = image(c.items.find((it) => it.image)?.image);
+---
+
+<Section id={id} fond={fond}>
+  <div class="conteneur">
+    <TitreSection id={id} surtitre={c.surtitre} titre={c.titre} intro={c.intro} />
+    <div class:list={["mt-12 md:mt-16", visuel && "grid gap-12 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16"]}>
+      <ol class="border-t border-trait">
+        {
+          c.items.map((it, i) => (
+            <li class="grid gap-x-8 gap-y-3 border-b border-trait py-8 sm:grid-cols-[4rem_minmax(0,1fr)] md:py-10">
+              <span aria-hidden="true" class="font-titres text-2xl leading-none texte-accent tabular-nums sm:pt-1.5">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div>
+                <h3 class="text-2xl md:text-[1.75rem]">{it.titre}</h3>
+                <p class="texte-doux mt-3 max-w-prose leading-relaxed">{it.texte}</p>
+                {it.points && it.points.length > 0 && (
+                  <ul class="mt-5 grid gap-x-6 gap-y-2.5 text-[0.9375rem] sm:grid-cols-2">
+                    {it.points.map((p) => (
+                      <li class="flex gap-2.5">
+                        <Icone nom="check" class="mt-[0.2rem] size-4 shrink-0 texte-accent" trait={2.25} />
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </li>
+          ))
+        }
+      </ol>
+      {
+        visuel && (
+          <div class="hidden lg:block">
+            <Cadre class="sticky top-28 aspect-[4/5]">
+              <Picture
+                src={visuel.src}
+                alt={visuel.alt}
+                widths={[480, 720, 960, 1200].filter((w) => w <= visuel.src.width)}
+                sizes="(min-width: 1280px) 460px, 38vw"
+                formats={["avif", "webp"]}
+                quality={60}
+                class="h-full w-full object-cover"
+                style={`object-position:${visuel.focale}`}
+              />
+            </Cadre>
+          </div>
+        )
+      }
+    </div>
+  </div>
+</Section>

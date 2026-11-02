@@ -1,0 +1,110 @@
+---
+/**
+ * En-tête collant. Variantes :
+ * - « simple » : une barre (logo, menu, téléphone, bouton Devis).
+ * - « double » : + bandeau d'informations au-dessus (adresse, horaires, note) sur tablette/bureau.
+ * Mobile : logo, bouton d'appel (icône + « Appeler ») et menu ; le menu déroulant reprend téléphone et devis.
+ */
+import { site, tel, liensMenu, ancreDevis, libelleDevis } from "../lib/site.ts";
+import { horairesFr } from "../lib/format.ts";
+import Icone from "../components/Icone.astro";
+import NoteGoogle from "../components/NoteGoogle.astro";
+import Logo from "./Logo.astro";
+const v = site.entete.variante;
+const horaires = horairesFr(site.entreprise.horaires);
+const e = site.entreprise;
+---
+
+{
+  v === "double" && (
+    <aside aria-label="Informations pratiques" class="hidden bg-sombre text-sur-sombre md:block">
+      <div class="conteneur flex min-h-11 items-center justify-between gap-6 text-sm">
+        <p class="flex items-center gap-2 text-sur-sombre-doux">
+          <Icone nom="map-pin" class="size-4 text-accent-sur-sombre" />
+          {e.adresse.rue}, {e.adresse.codePostal} {e.adresse.commune}
+        </p>
+        <div class="flex items-center gap-6">
+          {horaires[0] && (
+            <p class="hidden items-center gap-2 text-sur-sombre-doux lg:flex">
+              <Icone nom="clock" class="size-4 text-accent-sur-sombre" />
+              {horaires[0].jours}, {horaires[0].heures}
+            </p>
+          )}
+          {e.noteGoogle && <NoteGoogle clair class="text-sm" />}
+        </div>
+      </div>
+    </aside>
+  )
+}
+<header class="sticky top-0 z-40 border-b border-trait bg-fond/95 backdrop-blur-sm supports-[backdrop-filter]:bg-fond/90">
+  <div class="conteneur flex h-[4.5rem] items-center justify-between gap-4">
+    <Logo class="min-w-0" />
+    <nav aria-label="Navigation principale" class="hidden lg:block">
+      <ul class="flex items-center gap-1">
+        {
+          liensMenu.map((l) => (
+            <li>
+              <a href={l.href} class="rounded-ui px-3 py-2.5 text-[0.9375rem] font-medium text-encre no-underline transition-colors hover:bg-teinte">
+                {l.libelle}
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </nav>
+    <div class="flex shrink-0 items-center gap-2">
+      <a href={tel.lien} class="hidden items-center gap-2 rounded-ui px-3 py-2.5 font-semibold text-encre no-underline hover:bg-teinte md:inline-flex">
+        <Icone nom="phone" class="size-[1.125rem] text-accent-texte" />
+        <span class="tabular-nums">{tel.affiche}</span>
+      </a>
+      <a href={ancreDevis} class="btn btn-secondaire hidden min-h-11! px-4! sm:inline-flex">{libelleDevis}</a>
+      <a href={tel.lien} class="btn btn-primaire min-h-11! gap-2! px-3.5! md:hidden" aria-label={`Appeler le ${tel.affiche}`}>
+        <Icone nom="phone" class="size-[1.125rem]" />
+        <span class="hidden min-[26rem]:inline">Appeler</span>
+      </a>
+      <button
+        type="button"
+        class="grid size-11 place-items-center rounded-ui border border-trait text-encre lg:hidden"
+        aria-expanded="false"
+        aria-controls="menu-mobile"
+        data-menu-bouton
+      >
+        <span class="sr-only">Menu</span>
+        <Icone nom="menu" class="size-5" />
+      </button>
+    </div>
+  </div>
+  <nav id="menu-mobile" aria-label="Menu mobile" class="hidden border-t border-trait bg-fond lg:hidden" data-menu>
+    <ul class="conteneur flex flex-col py-3">
+      {
+        liensMenu.map((l) => (
+          <li>
+            <a href={l.href} class="flex min-h-12 items-center justify-between border-b border-trait/70 font-titres text-xl text-encre no-underline">
+              {l.libelle}
+              <Icone nom="arrow-right" class="size-5 text-encre-douce" />
+            </a>
+          </li>
+        ))
+      }
+      <li class="mt-4 grid gap-3 pb-2 sm:grid-cols-2">
+        <a href={tel.lien} class="btn btn-secondaire w-full"><Icone nom="phone" /> {tel.affiche}</a>
+        <a href={ancreDevis} class="btn btn-primaire w-full">{libelleDevis}</a>
+      </li>
+    </ul>
+  </nav>
+</header>
+
+<script is:inline>
+  (() => {
+    const b = document.querySelector("[data-menu-bouton]");
+    const m = document.querySelector("[data-menu]");
+    if (!b || !m) return;
+    const basculer = (ouvrir) => {
+      b.setAttribute("aria-expanded", String(ouvrir));
+      m.classList.toggle("hidden", !ouvrir);
+    };
+    b.addEventListener("click", () => basculer(b.getAttribute("aria-expanded") !== "true"));
+    m.addEventListener("click", (e) => e.target.closest("a") && basculer(false));
+    document.addEventListener("keydown", (e) => e.key === "Escape" && basculer(false));
+  })();
+</script>

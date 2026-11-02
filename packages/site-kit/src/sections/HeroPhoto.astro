@@ -1,0 +1,50 @@
+---
+/**
+ * Hero « photo » : photo de métier plein cadre, voile dégradé, texte en bas à gauche.
+ * À utiliser seulement avec une très bonne photo (calme du côté du texte). Image chargée en priorité.
+ */
+import { Picture } from "astro:assets";
+import type { SectionDe } from "../schema.ts";
+import { imageRequise } from "../lib/images.ts";
+import Surtitre from "../components/Surtitre.astro";
+import TitreHero from "../components/TitreHero.astro";
+import BoutonsHero from "../components/BoutonsHero.astro";
+interface Props {
+  section: SectionDe<"hero">;
+}
+const { contenu: c } = Astro.props.section;
+const img = imageRequise(c.image);
+---
+
+<section
+  id="haut"
+  aria-labelledby="haut-titre"
+  class="sur-sombre relative isolate flex min-h-[min(34rem,calc(100svh-7rem))] items-end overflow-hidden bg-sombre text-sur-sombre md:min-h-[min(46rem,calc(100svh-4.5rem))]"
+>
+  <Picture
+    src={img.src}
+    alt={img.alt}
+    widths={[640, 960, 1280, 1600, 2000, 2400].filter((w) => w <= img.src.width)}
+    sizes="100vw"
+    formats={["avif", "webp"]}
+    quality={58}
+    loading="eager"
+    fetchpriority="high"
+    class="absolute inset-0 -z-20 h-full w-full object-cover"
+    style={`object-position:${img.focale}`}
+  />
+  <div
+    aria-hidden="true"
+    class="absolute inset-0 -z-10 bg-linear-to-t from-sombre via-sombre/80 to-sombre/25 md:bg-linear-to-r md:from-sombre/95 md:via-sombre/70 md:to-sombre/5"
+  >
+  </div>
+  <div aria-hidden="true" class="absolute inset-x-0 bottom-0 -z-10 h-1/3 bg-linear-to-t from-sombre/70 to-transparent"></div>
+  <div class="conteneur pt-24 pb-10 md:pt-40 md:pb-20 lg:pb-24">
+    <div class="max-w-2xl">
+      <Surtitre texte={c.surtitre} />
+      <TitreHero titre={c.titre} accent={c.titreAccent} class="mt-4 text-[2.375rem] leading-[1.04] sm:text-[3.25rem] lg:text-[4.25rem]" />
+      <p class="mt-5 max-w-xl text-[1.0625rem] leading-relaxed sm:text-lg text-sur-sombre/90 md:text-xl">{c.sousTitre}</p>
+      <BoutonsHero contenu={c} clair class="mt-9" />
+    </div>
+  </div>
+</section>

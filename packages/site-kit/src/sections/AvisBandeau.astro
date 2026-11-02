@@ -1,0 +1,46 @@
+---
+/**
+ * Avis « bandeau » : bande horizontale (sombre par défaut), titre et phrase à gauche, note et lien à droite.
+ * Plus compacte que le badge : bonne transition entre deux grandes sections.
+ */
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, site } from "../lib/site.ts";
+import { noteFr } from "../lib/format.ts";
+import Section from "../components/Section.astro";
+import Surtitre from "../components/Surtitre.astro";
+import Etoiles from "../components/Etoiles.astro";
+import Icone from "../components/Icone.astro";
+interface Props {
+  section: SectionDe<"avis">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const n = site.entreprise.noteGoogle!;
+---
+
+<Section id={id} fond={fond} class="py-14! md:py-20!">
+  <div class="conteneur grid items-center gap-10 md:grid-cols-[minmax(0,1fr)_auto] md:gap-16">
+    <div class="max-w-2xl">
+      <Surtitre texte={c.surtitre} />
+      <h2 id={`${id}-titre`} class="mt-3 text-[1.875rem] md:text-[2.5rem]">{c.titre}</h2>
+      {c.texte && <p class="texte-doux mt-4 text-[1.0625rem]">{c.texte}</p>}
+    </div>
+    <div class="flex flex-wrap items-center gap-x-8 gap-y-5 md:border-l md:border-current/15 md:pl-12">
+      <div>
+        <p class="font-titres text-[4rem] leading-none">{noteFr(n.valeur)}<span class="texte-doux text-2xl">/5</span></p>
+        <Etoiles note={n.valeur} class="mt-3 h-5 w-25 texte-accent" />
+      </div>
+      <div>
+        <p class="texte-doux text-[0.9375rem]">{n.nombre} avis Google</p>
+        <a href={n.url} rel="noopener" target="_blank" class="lien mt-1 inline-flex min-h-11 items-center gap-1.5">
+          Voir la fiche
+          <Icone nom="arrow-up-right" class="size-4" />
+          <span class="sr-only">(nouvel onglet)</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</Section>

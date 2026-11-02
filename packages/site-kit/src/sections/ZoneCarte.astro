@@ -1,0 +1,116 @@
+---
+/**
+ * Zone « carte » : carte SVG stylisée (siège + communes à leur position réelle, anneaux en km) et liste des communes.
+ * Aucune carte Google ni tuile externe. Demande lat/lon pour chaque commune.
+ */
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, site, theme, ancreDevis } from "../lib/site.ts";
+import { carteZone } from "../lib/carte.ts";
+import { motif } from "../lib/signatures.ts";
+import Section from "../components/Section.astro";
+import TitreSection from "../components/TitreSection.astro";
+import Icone from "../components/Icone.astro";
+interface Props {
+  section: SectionDe<"zone">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const z = site.zone;
+const carte = carteZone(z);
+const sombre = fond === "sombre";
+const coul = theme.couleurs;
+const encre = sombre ? coul.surSombre : coul.encre;
+const doux = sombre ? coul.surSombreDoux : coul.encreDouce;
+const accent = sombre ? coul.accentSurSombre : coul.accentTexte;
+const m = motif(theme.signature, encre, 0.08);
+---
+
+<Section id={id} fond={fond}>
+  <div class="conteneur grid items-center gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
+    <div>
+      <TitreSection id={id} surtitre={c.surtitre} titre={c.titre} intro={c.intro} />
+      <h3 class="mt-10 text-sm font-semibold tracking-[0.12em] uppercase texte-doux font-corps!">Communes desservies</h3>
+      <ul class="mt-4 flex flex-wrap gap-2">
+        <li class:list={["inline-flex min-h-10 items-center gap-2 rounded-ui px-3.5 text-[0.9375rem] font-semibold", sombre ? "bg-accent-sur-sombre text-sombre" : "bg-sombre text-sur-sombre"]}>
+          <Icone nom="map-pin" class="size-4" />
+          {z.commune.nom}
+        </li>
+        {
+          z.voisines.map((v) => (
+            <li class:list={["inline-flex min-h-10 items-center rounded-ui border px-3.5 text-[0.9375rem]", sombre ? "border-white/15" : "border-trait bg-surface"]}>
+              {v.nom}
+            </li>
+          ))
+        }
+      </ul>
+      {z.precision && <p class="texte-doux mt-6 text-[0.9375rem]">{z.precision}</p>}
+      <a href={ancreDevis} class="lien mt-8 inline-flex min-h-11 items-center gap-2">
+        Vérifier votre commune avec un devis
+        <Icone nom="arrow-right" class="size-4" />
+      </a>
+    </div>
+    <figure class:list={["relative overflow-hidden rounded-ui-l border", sombre ? "border-white/10 bg-sombre-surface" : "border-trait bg-surface"]}>
+      <div aria-hidden="true" class="absolute inset-0" style={`background-image:${m.image};background-size:${m.taille}`}></div>
+      <svg
+        viewBox={`0 0 ${carte.largeur} ${carte.hauteur}`}
+        class="relative block h-auto w-full"
+        role="img"
+        aria-label={`Carte schématique : ${z.commune.nom} et les communes alentour (${z.voisines.map((v) => v.nom).join(", ")}).`}
+      >
+        {
+          carte.anneaux.map((a) => (
+            <g>
+              <circle cx={carte.cx} cy={carte.cy} r={a.r} fill="none" stroke={doux} stroke-opacity=".35" stroke-dasharray="3 6" />
+              <text x={carte.cx + a.r * 0.707 + 4} y={carte.cy - a.r * 0.707 - 4} fill={doux} font-size="17" style="font-family:var(--f-corps)">
+                {a.km} km
+              </text>
+            </g>
+          ))
+        }
+        {
+          carte.points
+            .filter((p) => !p.siege)
+            .map((p) => <line x1={carte.cx} y1={carte.cy} x2={p.x} y2={p.y} stroke={accent} stroke-opacity=".28" stroke-width="1.25" />)
+        }
+        {
+          carte.points.map((p) =>
+            p.siege ? (
+              <g>
+                <circle cx={p.x} cy={p.y} r="22" fill={accent} fill-opacity=".14" />
+                <circle cx={p.x} cy={p.y} r="9" fill={accent} />
+                <circle cx={p.x} cy={p.y} r="3.5" fill={sombre ? coul.sombre : coul.surface} />
+              </g>
+            ) : (
+              <circle cx={p.x} cy={p.y} r="7" fill={sombre ? coul.sombreSurface : coul.surface} stroke={encre} stroke-width="2" />
+            ),
+          )
+        }
+        {
+          carte.points.map((p) => (
+            <text
+              x={p.lx}
+              y={p.ly}
+              text-anchor={p.ancre}
+              fill={encre}
+              font-size={p.siege ? 30 : 26}
+              font-weight={p.siege ? 700 : 500}
+              style={`font-family:var(${p.siege ? "--f-titres" : "--f-corps"})`}
+              stroke={sombre ? coul.sombreSurface : coul.surface}
+              stroke-width="7"
+              stroke-linejoin="round"
+              paint-order="stroke"
+            >
+              {p.nom}
+            </text>
+          ))
+        }
+      </svg>
+      <figcaption class="texte-doux relative border-t border-current/10 px-5 py-3 text-sm">
+        Schéma indicatif, distances à vol d’oiseau depuis {z.commune.nom}.
+      </figcaption>
+    </figure>
+  </div>
+</Section>

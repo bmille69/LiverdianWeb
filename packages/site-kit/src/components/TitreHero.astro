@@ -1,0 +1,17 @@
+---
+/** H1 unique de la page, avec mise en valeur facultative d'un extrait (titreAccent). */
+interface Props {
+  titre: string;
+  accent?: string;
+  class?: string;
+  classeAccent?: string;
+}
+const { titre, accent, class: classe = "", classeAccent = "texte-accent" } = Astro.props;
+const i = accent ? titre.indexOf(accent) : -1;
+const avant = i >= 0 ? titre.slice(0, i) : titre;
+const apres = i >= 0 && accent ? titre.slice(i + accent.length) : "";
+---
+
+<h1 id="haut-titre" class={classe}>
+  {avant}{i >= 0 && <span class={classeAccent}>{accent}</span>}{apres}
+</h1>

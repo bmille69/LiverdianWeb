@@ -1,0 +1,268 @@
+@import "tailwindcss";
+
+/*
+ * Jetons du thème → utilitaires Tailwind.
+ * Les valeurs viennent des variables --c-*, --f-*, --rayon injectées par Base.astro depuis le thème du site.
+ * Exemple : bg-fond, text-encre, text-encre-douce, bg-sombre, bg-accent, text-sur-accent, rounded-ui, font-titres.
+ */
+@theme inline {
+  --color-fond: var(--c-fond);
+  --color-surface: var(--c-surface);
+  --color-teinte: var(--c-teinte);
+  --color-encre: var(--c-encre);
+  --color-encre-douce: var(--c-encre-douce);
+  --color-trait: var(--c-trait);
+  --color-sombre: var(--c-sombre);
+  --color-sombre-surface: var(--c-sombre-surface);
+  --color-sur-sombre: var(--c-sur-sombre);
+  --color-sur-sombre-doux: var(--c-sur-sombre-doux);
+  --color-accent: var(--c-accent);
+  --color-sur-accent: var(--c-sur-accent);
+  --color-accent-texte: var(--c-accent-texte);
+  --color-accent-sur-sombre: var(--c-accent-sur-sombre);
+
+  --font-titres: var(--f-titres);
+  --font-corps: var(--f-corps);
+
+  --radius-ui: var(--rayon);
+  --radius-ui-l: var(--rayon-l);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+    /* L'en-tête collant ne masque pas le titre des ancres. */
+    scroll-padding-top: 5.5rem;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+  body {
+    background: var(--c-fond);
+    color: var(--c-encre);
+    font-family: var(--f-corps);
+    font-size: 1.0625rem;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "kern", "liga";
+  }
+  h1,
+  h2,
+  h3,
+  .titre {
+    font-family: var(--f-titres);
+    font-weight: var(--poids-titre);
+    letter-spacing: var(--approche-titre);
+    line-height: 1.08;
+    text-wrap: balance;
+  }
+  h3 {
+    line-height: 1.2;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  a {
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  :focus-visible {
+    outline: 3px solid var(--c-accent-texte);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+  .sur-sombre :focus-visible {
+    outline-color: var(--c-accent-sur-sombre);
+  }
+  ::selection {
+    background: var(--c-accent);
+    color: var(--c-sur-accent);
+  }
+}
+
+@layer components {
+  .conteneur {
+    width: 100%;
+    max-width: 78rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 48rem) {
+    .conteneur {
+      padding-inline: 2rem;
+    }
+  }
+
+  /* Rythme vertical des sections : 64 px mobile, 96 px tablette, 128 px bureau. */
+  .section {
+    padding-block: 4rem;
+  }
+  @media (min-width: 48rem) {
+    .section {
+      padding-block: 6rem;
+    }
+  }
+  @media (min-width: 80rem) {
+    .section {
+      padding-block: 8rem;
+    }
+  }
+
+  /* Boutons : un seul style primaire (accent), un secondaire (contour). Hauteur ≥ 48 px. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    min-height: 3rem;
+    padding: 0.75rem 1.375rem;
+    border-radius: var(--rayon);
+    font-weight: 600;
+    font-size: 1rem;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+      background-color 180ms ease,
+      color 180ms ease,
+      border-color 180ms ease,
+      transform 180ms ease,
+      box-shadow 180ms ease;
+  }
+  .btn svg {
+    width: 1.125rem;
+    height: 1.125rem;
+    flex: none;
+  }
+  .btn-primaire {
+    background: var(--c-accent);
+    color: var(--c-sur-accent);
+    box-shadow: 0 1px 0 rgb(0 0 0 / 0.08);
+  }
+  .btn-primaire:hover {
+    background: color-mix(in oklab, var(--c-accent), var(--c-encre) 14%);
+    transform: translateY(-1px);
+  }
+  .btn-secondaire {
+    border: 1.5px solid color-mix(in oklab, var(--c-encre), transparent 70%);
+    color: var(--c-encre);
+    background: transparent;
+  }
+  .btn-secondaire:hover {
+    border-color: var(--c-encre);
+    background: color-mix(in oklab, var(--c-encre), transparent 94%);
+  }
+  .sur-sombre .btn-secondaire,
+  .btn-secondaire.sur-photo {
+    border-color: color-mix(in oklab, var(--c-sur-sombre), transparent 55%);
+    color: var(--c-sur-sombre);
+  }
+  .sur-sombre .btn-secondaire:hover,
+  .btn-secondaire.sur-photo:hover {
+    border-color: var(--c-sur-sombre);
+    background: color-mix(in oklab, var(--c-sur-sombre), transparent 90%);
+  }
+
+  .lien {
+    color: var(--c-accent-texte);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: color-mix(in oklab, var(--c-accent-texte), transparent 60%);
+    transition: text-decoration-color 160ms ease;
+  }
+  .lien:hover {
+    text-decoration-color: currentColor;
+  }
+  .sur-sombre .lien {
+    color: var(--c-accent-sur-sombre);
+    text-decoration-color: color-mix(in oklab, var(--c-accent-sur-sombre), transparent 60%);
+  }
+
+  /* Fonds de section (alternance obligatoire : jamais deux fois le même à la suite). */
+  .fond-clair {
+    background: var(--c-fond);
+  }
+  .fond-surface {
+    background: var(--c-surface);
+  }
+  .fond-teinte {
+    background: var(--c-teinte);
+  }
+  .fond-sombre {
+    background: var(--c-sombre);
+    color: var(--c-sur-sombre);
+  }
+
+  /* Textes atténués selon le fond. */
+  .texte-doux {
+    color: var(--c-encre-douce);
+  }
+  .sur-sombre .texte-doux {
+    color: var(--c-sur-sombre-doux);
+  }
+  .texte-accent {
+    color: var(--c-accent-texte);
+  }
+  .sur-sombre .texte-accent {
+    color: var(--c-accent-sur-sombre);
+  }
+
+  /* Titres de section : échelle fixe. */
+  .titre-section {
+    font-size: clamp(2rem, 1.35rem + 2.4vw, 3.25rem);
+  }
+  .intro {
+    font-size: 1.125rem;
+    max-width: 40rem;
+  }
+  @media (min-width: 64rem) {
+    .intro {
+      font-size: 1.1875rem;
+    }
+  }
+
+  .sr-only-focusable:not(:focus) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Contour de texte (mot signature géant du hero typographique). */
+  .contour {
+    color: transparent;
+    -webkit-text-stroke: 1.5px var(--contour, var(--c-encre));
+  }
+}
+
+/* Îlot clair dans une section sombre (ex. carte du formulaire) : on rétablit les couleurs claires. */
+@layer components {
+  .sur-sombre .sur-clair {
+    color: var(--c-encre);
+  }
+  .sur-sombre .sur-clair .texte-doux {
+    color: var(--c-encre-douce);
+  }
+  .sur-sombre .sur-clair .texte-accent,
+  .sur-sombre .sur-clair .lien {
+    color: var(--c-accent-texte);
+  }
+  .sur-sombre .sur-clair :focus-visible {
+    outline-color: var(--c-accent-texte);
+  }
+}

@@ -1,0 +1,48 @@
+---
+/**
+ * Avis « badge » : la note Google réelle en très grand (chiffre, étoiles, nombre d'avis), lien vers la fiche.
+ * Aucun texte d'avis recopié. Section courte et centrée.
+ */
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, site } from "../lib/site.ts";
+import { noteFr } from "../lib/format.ts";
+import Section from "../components/Section.astro";
+import Surtitre from "../components/Surtitre.astro";
+import Etoiles from "../components/Etoiles.astro";
+import Icone from "../components/Icone.astro";
+interface Props {
+  section: SectionDe<"avis">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const n = site.entreprise.noteGoogle!;
+---
+
+<Section id={id} fond={fond} texture>
+  <div class="conteneur">
+    <div class="mx-auto flex max-w-3xl flex-col items-center text-center">
+      <Surtitre texte={c.surtitre} class="justify-center" />
+      <h2 id={`${id}-titre`} class="titre-section mt-4">{c.titre}</h2>
+      <div class="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:gap-8">
+        <p class="font-titres text-[5.5rem] leading-none tracking-tight md:text-[7rem]">
+          {noteFr(n.valeur)}<span class="texte-doux text-[0.35em]">/5</span>
+        </p>
+        <div class="flex flex-col items-center gap-2 sm:items-start">
+          <Etoiles note={n.valeur} class="h-7 w-[8.75rem] texte-accent" />
+          <p class="texte-doux">
+            Note moyenne sur <strong class="font-semibold text-current">{n.nombre} avis</strong> Google
+          </p>
+        </div>
+      </div>
+      {c.texte && <p class="intro texte-doux mx-auto mt-8">{c.texte}</p>}
+      <a href={n.url} rel="noopener" target="_blank" class="btn btn-secondaire mt-9">
+        Lire les avis sur Google
+        <Icone nom="arrow-up-right" />
+        <span class="sr-only">(nouvel onglet)</span>
+      </a>
+    </div>
+  </div>
+</Section>

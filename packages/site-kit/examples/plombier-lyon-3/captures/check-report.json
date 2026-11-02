@@ -1,0 +1,266 @@
+{
+  "version": 1,
+  "site": "C:\\Users\\Bat\\AppData\\Local\\Temp\\lv-sites\\plomb",
+  "date": "2026-11-02T08:59:47.662Z",
+  "ok": true,
+  "demo": true,
+  "seuils": {
+    "lighthouse": 95,
+    "poidsMaxOctets": 1048576
+  },
+  "build": {
+    "ok": true,
+    "dureeMs": 23526,
+    "avertissements": []
+  },
+  "lighthouse": {
+    "performance": 100,
+    "accessibilite": 100,
+    "bonnesPratiques": 100,
+    "seo": 66,
+    "metriques": {
+      "fcpMs": 933,
+      "lcpMs": 933,
+      "tbtMs": 0,
+      "cls": 0,
+      "speedIndexMs": 933,
+      "poidsOctets": 118174
+    },
+    "auditsRates": {
+      "performance": [],
+      "accessibilite": [],
+      "bonnesPratiques": [],
+      "seo": [
+        {
+          "id": "is-crawlable",
+          "titre": "Page is blocked from indexing",
+          "score": 0
+        }
+      ]
+    },
+    "runs": 3,
+    "performancesMesurees": [
+      100,
+      100,
+      100
+    ],
+    "seoNote": "démo : la catégorie SEO est pénalisée par noindex (attendu), non comptée dans le seuil"
+  },
+  "axe": {
+    "violations": [],
+    "graves": 0
+  },
+  "controles": [
+    {
+      "id": "build-sans-avertissement",
+      "ok": true,
+      "bloquant": false,
+      "detail": "aucun avertissement"
+    },
+    {
+      "id": "texte-interdit /confidentialite/",
+      "ok": true,
+      "bloquant": true,
+      "detail": "aucun"
+    },
+    {
+      "id": "h1-unique /confidentialite/",
+      "ok": true,
+      "bloquant": true,
+      "detail": "1 H1"
+    },
+    {
+      "id": "lang-fr /confidentialite/",
+      "ok": true,
+      "bloquant": true,
+      "detail": "attribut lang"
+    },
+    {
+      "id": "demo-bandeau /confidentialite/",
+      "ok": true,
+      "bloquant": true,
+      "detail": "bandeau maquette présent"
+    },
+    {
+      "id": "demo-noindex /confidentialite/",
+      "ok": true,
+      "bloquant": true,
+      "detail": "meta robots noindex"
+    },
+    {
+      "id": "texte-interdit /",
+      "ok": true,
+      "bloquant": true,
+      "detail": "aucun"
+    },
+    {
+      "id": "h1-unique /",
+      "ok": true,
+      "bloquant": true,
+      "detail": "1 H1"
+    },
+    {
+      "id": "lang-fr /",
+      "ok": true,
+      "bloquant": true,
+      "detail": "attribut lang"
+    },
+    {
+      "id": "demo-bandeau /",
+      "ok": true,
+      "bloquant": true,
+      "detail": "bandeau maquette présent"
+    },
+    {
+      "id": "demo-noindex /",
+      "ok": true,
+      "bloquant": true,
+      "detail": "meta robots noindex"
+    },
+    {
+      "id": "texte-interdit /mentions-legales/",
+      "ok": true,
+      "bloquant": true,
+      "detail": "aucun"
+    },
+    {
+      "id": "h1-unique /mentions-legales/",
+      "ok": true,
+      "bloquant": true,
+      "detail": "1 H1"
+    },
+    {
+      "id": "lang-fr /mentions-legales/",
+      "ok": true,
+      "bloquant": true,
+      "detail": "attribut lang"
+    },
+    {
+      "id": "demo-bandeau /mentions-legales/",
+      "ok": true,
+      "bloquant": true,
+      "detail": "bandeau maquette présent"
+    },
+    {
+      "id": "demo-noindex /mentions-legales/",
+      "ok": true,
+      "bloquant": true,
+      "detail": "meta robots noindex"
+    },
+    {
+      "id": "liens-internes",
+      "ok": true,
+      "bloquant": true,
+      "detail": "83 liens vérifiés"
+    },
+    {
+      "id": "demo-robots",
+      "ok": true,
+      "bloquant": true,
+      "detail": "robots.txt Disallow: /"
+    },
+    {
+      "id": "json-ld",
+      "ok": true,
+      "bloquant": true,
+      "detail": "données structurées LocalBusiness"
+    },
+    {
+      "id": "lighthouse-performance",
+      "ok": true,
+      "bloquant": true,
+      "detail": "100/100"
+    },
+    {
+      "id": "lighthouse-accessibilite",
+      "ok": true,
+      "bloquant": true,
+      "detail": "100/100"
+    },
+    {
+      "id": "lighthouse-bonnes-pratiques",
+      "ok": true,
+      "bloquant": true,
+      "detail": "100/100"
+    },
+    {
+      "id": "lighthouse-seo-hors-noindex",
+      "ok": true,
+      "bloquant": true,
+      "detail": "seul is-crawlable échoue (noindex)"
+    },
+    {
+      "id": "poids-page",
+      "ok": true,
+      "bloquant": true,
+      "detail": "115 Ko"
+    },
+    {
+      "id": "cls",
+      "ok": true,
+      "bloquant": true,
+      "detail": "CLS 0"
+    },
+    {
+      "id": "defilement-horizontal 375px",
+      "ok": true,
+      "bloquant": true,
+      "detail": "aucun"
+    },
+    {
+      "id": "images-cassees 375px",
+      "ok": true,
+      "bloquant": true,
+      "detail": "aucune"
+    },
+    {
+      "id": "defilement-horizontal 768px",
+      "ok": true,
+      "bloquant": true,
+      "detail": "aucun"
+    },
+    {
+      "id": "images-cassees 768px",
+      "ok": true,
+      "bloquant": true,
+      "detail": "aucune"
+    },
+    {
+      "id": "defilement-horizontal 1440px",
+      "ok": true,
+      "bloquant": true,
+      "detail": "aucun"
+    },
+    {
+      "id": "images-cassees 1440px",
+      "ok": true,
+      "bloquant": true,
+      "detail": "aucune"
+    },
+    {
+      "id": "appel-visible-ecran-initial",
+      "ok": true,
+      "bloquant": true,
+      "detail": "lien tel: visible sans défiler (375×667)"
+    },
+    {
+      "id": "demo-bandeau-visible",
+      "ok": true,
+      "bloquant": true,
+      "detail": "bandeau en haut de l'écran initial"
+    },
+    {
+      "id": "axe-graves",
+      "ok": true,
+      "bloquant": true,
+      "detail": "0 grave, 0 mineure(s)"
+    }
+  ],
+  "captures": {
+    "375": "capture-375.png",
+    "768": "capture-768.png",
+    "1440": "capture-1440.png",
+    "initial": "capture-375-initial.png"
+  },
+  "echecs": []
+}

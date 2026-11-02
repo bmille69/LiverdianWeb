@@ -1,0 +1,31 @@
+---
+/** Politique de confidentialité du formulaire de devis (RGPD), générée depuis site.json. */
+import PageLegale from "../layouts/PageLegale.astro";
+import { site, nom, tel, demo } from "../lib/site.ts";
+
+const e = site.entreprise;
+---
+
+<PageLegale titre="Confidentialité" description={`Politique de confidentialité du site de ${nom} : données du formulaire de devis, durée de conservation, vos droits. Aucun cookie ni traceur.`} chemin="/confidentialite/">
+  {demo && (<p><strong>Maquette :</strong> sur cette démonstration, le formulaire n’envoie aucune donnée. Le texte ci-dessous décrit le fonctionnement du site final.</p>)}
+  <h2>Responsable du traitement</h2>
+  <p>{e.raisonSociale}, {e.adresse.rue}, {e.adresse.codePostal} {e.adresse.commune}. Téléphone : <a href={tel.lien}>{tel.affiche}</a>{e.email && <>, email : <a href={`mailto:${e.email}`}>{e.email}</a></>}.</p>
+
+  <h2>Données collectées et finalité</h2>
+  <p>Le formulaire de devis recueille votre nom, votre téléphone, la commune des travaux, votre besoin et votre message. Ces informations servent uniquement à répondre à votre demande de devis et à vous recontacter à ce sujet.</p>
+
+  <h2>Base légale</h2>
+  <p>Mesures précontractuelles prises à votre demande (article 6.1.b du RGPD).</p>
+
+  <h2>Destinataire</h2>
+  <p>{e.raisonSociale} seule. Vos données ne sont ni vendues, ni cédées, ni utilisées à des fins publicitaires.</p>
+
+  <h2>Durée de conservation</h2>
+  <p>Trois ans à compter du dernier contact, puis suppression.</p>
+
+  <h2>Vos droits</h2>
+  <p>Vous pouvez demander l’accès, la rectification ou l’effacement de vos données, et vous opposer à leur traitement, en écrivant à {e.email ? <a href={`mailto:${e.email}`}>{e.email}</a> : "l’adresse du siège"}. Vous pouvez aussi adresser une réclamation à la CNIL (<a href="https://www.cnil.fr">cnil.fr</a>).</p>
+
+  <h2>Cookies et traceurs</h2>
+  <p>Ce site n’utilise aucun cookie, aucun outil de mesure d’audience et ne charge aucun service tiers (polices, cartes, vidéos) : aucun bandeau de consentement n’est donc nécessaire.</p>
+</PageLegale>

@@ -1,0 +1,76 @@
+---
+/**
+ * Services « bandes » : une bande par prestation, image et texte en alternance gauche/droite.
+ * Chaque service a sa photo. Pour 2 à 4 prestations phares avec de bonnes images.
+ */
+import { Picture } from "astro:assets";
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, ancreDevis } from "../lib/site.ts";
+import { imageRequise } from "../lib/images.ts";
+import Section from "../components/Section.astro";
+import TitreSection from "../components/TitreSection.astro";
+import Icone from "../components/Icone.astro";
+import Cadre from "../components/Cadre.astro";
+interface Props {
+  section: SectionDe<"services">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+const sombre = fond === "sombre";
+---
+
+<Section id={id} fond={fond}>
+  <div class="conteneur">
+    <TitreSection id={id} surtitre={c.surtitre} titre={c.titre} intro={c.intro} />
+    <ul class="mt-14 space-y-16 md:mt-20 md:space-y-24">
+      {
+        c.items.map((it, i) => {
+          const img = imageRequise(it.image);
+          const inverse = i % 2 === 1;
+          return (
+            <li class="grid items-center gap-8 md:grid-cols-2 md:gap-12 lg:gap-20">
+              <Cadre class:list={["aspect-[4/3]", inverse && "md:order-2"]} sombre={sombre}>
+                <Picture
+                  src={img.src}
+                  alt={img.alt}
+                  widths={[480, 720, 960, 1280].filter((w) => w <= img.src.width)}
+                  sizes="(min-width: 1280px) 580px, (min-width: 768px) 48vw, 100vw"
+                  formats={["avif", "webp"]}
+                  quality={60}
+                  class="h-full w-full object-cover"
+                  style={`object-position:${img.focale}`}
+                />
+              </Cadre>
+              <div class:list={["max-w-xl", inverse && "md:order-1"]}>
+                <p aria-hidden="true" class="font-titres text-sm texte-accent tabular-nums">
+                  {String(i + 1).padStart(2, "0")} / {String(c.items.length).padStart(2, "0")}
+                </p>
+                <h3 class="mt-3 text-[1.75rem] md:text-[2.25rem]">{it.titre}</h3>
+                <p class="texte-doux mt-4 text-[1.0625rem] leading-relaxed">{it.texte}</p>
+                {it.points && it.points.length > 0 && (
+                  <ul class:list={["mt-6 space-y-3 border-t pt-6 text-[0.9875rem]", sombre ? "border-white/12" : "border-trait"]}>
+                    {it.points.map((p) => (
+                      <li class="flex gap-3">
+                        <Icone nom="check" class="mt-[0.2rem] size-[1.125rem] shrink-0 texte-accent" trait={2.25} />
+                        {p}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {i === c.items.length - 1 && (
+                  <a href={ancreDevis} class="lien mt-8 inline-flex min-h-11 items-center gap-2">
+                    Demander un devis
+                    <Icone nom="arrow-right" class="size-4" />
+                  </a>
+                )}
+              </div>
+            </li>
+          );
+        })
+      }
+    </ul>
+  </div>
+</Section>

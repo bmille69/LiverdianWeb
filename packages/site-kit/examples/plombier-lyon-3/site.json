@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "slug": "saxe-plomberie",
+  "entreprise": {
+    "raisonSociale": "SAXE PLOMBERIE",
+    "nomCommercial": "Saxe Plomberie",
+    "metier": "plombier",
+    "metierLibelle": "Plombier",
+    "naf": "43.22A",
+    "siren": "887 213 640",
+    "formeJuridique": "SASU",
+    "adresse": { "rue": "112 avenue de Saxe", "codePostal": "69003", "commune": "Lyon" },
+    "telephone": "04 65 71 58 02",
+    "horaires": [{ "jours": ["lu", "ma", "me", "je", "ve"], "ouverture": "07:30", "fermeture": "19:00" }],
+    "noteGoogle": { "valeur": 4.9, "nombre": 112, "url": "https://www.google.com/maps?cid=1000000000000000002" },
+    "dateCreation": "2019-09-02",
+    "dirigeant": "Julien Mercier"
+  },
+  "zone": {
+    "commune": { "nom": "Lyon 3e" },
+    "voisines": [
+      { "nom": "Lyon 6e" },
+      { "nom": "Lyon 7e" },
+      { "nom": "Lyon 8e" },
+      { "nom": "Lyon 2e" },
+      { "nom": "Lyon 1er" },
+      { "nom": "Villeurbanne" },
+      { "nom": "Bron" }
+    ],
+    "precision": "Part-Dieu, Montchat, Sans-Souci, Villette, Guillotière : le 3e se traverse en quelques minutes depuis l'avenue de Saxe."
+  },
+  "theme": { "preset": "plombier" },
+  "images": {
+    "salle-de-bain": {
+      "fichier": "stock/plombier/salle-de-bain-finie-02.jpg",
+      "alt": "Salle de bain lumineuse avec double vasque à poser et douche à l'italienne"
+    },
+    "sdb-1": { "fichier": "stock/plombier/salle-de-bain-finie-01.jpg", "alt": "Salle de bain rénovée avec douche vitrée et sèche-serviettes" },
+    "sdb-3": { "fichier": "stock/plombier/salle-de-bain-finie-03.jpg", "alt": "Meuble vasque en bois et robinetterie noire dans une salle de bain en pierre claire", "focale": "50% 60%" },
+    "robinet": { "fichier": "stock/plombier/robinetterie-02.jpg", "alt": "Robinet col de cygne noir au-dessus d'une vasque" },
+    "raccord": { "fichier": "stock/plombier/raccordement-02.jpg", "alt": "Serrage d'un raccord en laiton sur une canalisation" },
+    "cuivre": { "fichier": "stock/plombier/tuyauterie-cuivre-02.jpg", "alt": "Tube de cuivre travaillé dans un étau d'atelier", "focale": "50% 55%" },
+    "intervention": { "fichier": "stock/plombier/plombier-intervention-01.jpg", "alt": "Plombier intervenant sur les canalisations d'une salle de bain", "focale": "60% 50%" }
+  },
+  "entete": { "variante": "simple" },
+  "sections": [
+    {
+      "type": "hero",
+      "variante": "typo",
+      "contenu": {
+        "surtitre": "Plombier · Lyon 3e",
+        "titre": "Une fuite, un projet ? Votre plombier à Lyon 3e",
+        "titreAccent": "Votre plombier à Lyon 3e",
+        "sousTitre": "Julien Mercier intervient de la Part-Dieu à Montchat, en appartement comme en maison de ville. Appelez pour une urgence, écrivez pour un projet.",
+        "motSignature": "Plomberie",
+        "afficherNote": true
+      }
+    },
+    {
+      "type": "services",
+      "variante": "liste",
+      "contenu": {
+        "surtitre": "Interventions",
+        "titre": "Quatre métiers, un seul numéro",
+        "intro": "Du joint qui fuit à la salle de bain refaite, Saxe Plomberie s'occupe de toute l'eau de votre logement : arrivée, évacuation et eau chaude.",
+        "items": [
+          {
+            "titre": "Fuites et dépannages",
+            "image": "salle-de-bain",
+            "texte": "Robinet qui goutte, chasse d'eau qui coule, fuite sous l'évier ou derrière un mur : on localise, on répare et on vous dit comment éviter que ça recommence.",
+            "points": ["Recherche de fuite", "Évier et WC bouchés", "Mécanisme de chasse", "Robinetterie"]
+          },
+          {
+            "titre": "Chauffe-eau",
+            "texte": "Plus d'eau chaude, ballon qui fuit ou qui fait du bruit : réparation quand elle vaut le coup, sinon remplacement par un appareil dimensionné pour votre foyer.",
+            "points": ["Groupe de sécurité", "Détartrage", "Ballon électrique ou thermodynamique"]
+          },
+          {
+            "titre": "Salles de bain",
+            "texte": "Baignoire remplacée par une douche à l'italienne, meuble vasque, WC suspendu : la plomberie du projet est pensée avant la pose du carrelage.",
+            "points": ["Douche à l'italienne", "Meuble vasque", "WC suspendu", "Sèche-serviettes"]
+          },
+          {
+            "titre": "Canalisations anciennes",
+            "texte": "Dans les immeubles anciens du 3e, il reste des colonnes en plomb ou en acier galvanisé. Elles sont remplacées par du cuivre ou du multicouche.",
+            "points": ["Cuivre et multicouche", "Vannes d'arrêt", "Évacuations PVC"]
+          }
+        ]
+      }
+    },
+    {
+      "type": "appel",
+      "variante": "bande",
+      "contenu": {
+        "titre": "Une fuite en ce moment ?",
+        "texte": "Fermez le robinet d'arrivée d'eau, coupez le courant si l'eau approche d'une prise, puis appelez : on vous guide au téléphone."
+      }
+    },
+    {
+      "type": "realisations",
+      "variante": "grille",
+      "contenu": {
+        "surtitre": "Réalisations",
+        "titre": "Salles d'eau, réseaux, finitions",
+        "intro": "Un aperçu du type de chantiers menés dans les appartements et maisons de ville de l'est lyonnais.",
+        "images": [
+          { "image": "sdb-1", "legende": "Douche vitrée et sèche-serviettes" },
+          { "image": "sdb-3", "legende": "Meuble vasque en bois massif" },
+          { "image": "robinet", "legende": "Robinetterie noire col de cygne" },
+          { "image": "raccord", "legende": "Raccord laiton sur colonne" },
+          { "image": "cuivre", "legende": "Cintrage d'un tube cuivre" },
+          { "image": "intervention", "legende": "Reprise d'alimentation en salle de bain" }
+        ]
+      }
+    },
+    {
+      "type": "avis",
+      "variante": "badge",
+      "contenu": {
+        "surtitre": "Avis Google",
+        "titre": "Ce que disent les chiffres",
+        "texte": "Note moyenne relevée sur la fiche Google de Saxe Plomberie. Les avis complets se lisent directement sur Google."
+      }
+    },
+    {
+      "type": "zone",
+      "variante": "liste",
+      "contenu": {
+        "surtitre": "Secteur",
+        "titre": "Le 3e et les arrondissements voisins",
+        "intro": "L'entreprise est installée avenue de Saxe. Elle se déplace dans tout le 3e et dans les quartiers et communes qui l'entourent."
+      }
+    },
+    {
+      "type": "devis",
+      "variante": "encadre",
+      "contenu": {
+        "surtitre": "Devis",
+        "titre": "Un projet de salle de bain, un chauffe-eau à changer ?",
+        "intro": "Décrivez votre projet en quelques lignes : Julien Mercier vous rappelle pour en parler et fixer une visite. Pour une fuite, le téléphone reste le plus rapide.",
+        "boutonEnvoyer": "Envoyer ma demande"
+      }
+    }
+  ],
+  "pied": { "variante": "sobre" },
+  "seo": {
+    "description": "Plombier à Lyon 3e : fuites, chauffe-eau, salles de bain et canalisations anciennes. Saxe Plomberie intervient de la Part-Dieu à Montchat et alentour."
+  },
+  "demo": { "actif": true, "agence": "Liverdian", "dateSuppression": "2026-12-02" }
+}

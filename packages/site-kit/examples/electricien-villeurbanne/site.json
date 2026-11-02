@@ -1,0 +1,184 @@
+{
+  "version": 1,
+  "slug": "volta-rhone",
+  "entreprise": {
+    "raisonSociale": "VOLTA RHÔNE ÉLECTRICITÉ",
+    "nomCommercial": "Volta Rhône",
+    "metier": "electricien",
+    "metierLibelle": "Électricien",
+    "naf": "43.21A",
+    "siren": "912 504 337",
+    "siret": "912 504 337 00018",
+    "formeJuridique": "SARL",
+    "capital": "5 000 €",
+    "rcs": "RCS Lyon 912 504 337",
+    "adresse": { "rue": "27 rue Francis-de-Pressensé", "codePostal": "69100", "commune": "Villeurbanne" },
+    "telephone": "04 65 71 23 48",
+    "email": "contact@volta-rhone.example",
+    "horaires": [
+      { "jours": ["lu", "ma", "me", "je", "ve"], "ouverture": "08:00", "fermeture": "18:00" },
+      { "jours": ["sa"], "ouverture": "09:00", "fermeture": "12:00" }
+    ],
+    "noteGoogle": { "valeur": 4.8, "nombre": 64, "url": "https://www.google.com/maps?cid=1000000000000000001" },
+    "dateCreation": "2016-03-14",
+    "dirigeant": "Karim Haddad"
+  },
+  "zone": {
+    "commune": { "nom": "Villeurbanne", "lat": 45.7719, "lon": 4.8902 },
+    "voisines": [
+      { "nom": "Lyon 6e", "lat": 45.7705, "lon": 4.8525 },
+      { "nom": "Caluire-et-Cuire", "lat": 45.7953, "lon": 4.8467 },
+      { "nom": "Rillieux-la-Pape", "lat": 45.8211, "lon": 4.8986 },
+      { "nom": "Vaulx-en-Velin", "lat": 45.7786, "lon": 4.9206 },
+      { "nom": "Décines-Charpieu", "lat": 45.7686, "lon": 4.9592 },
+      { "nom": "Bron", "lat": 45.7386, "lon": 4.9131 },
+      { "nom": "Lyon 3e", "lat": 45.7597, "lon": 4.8510 }
+    ],
+    "precision": "Au-delà, appelez : on vous dit franchement si le déplacement a du sens."
+  },
+  "theme": { "preset": "electricien" },
+  "images": {
+    "hero": {
+      "fichier": "stock/maison/interieur-parquet-01.jpg",
+      "alt": "Salle à manger d'un appartement ancien rénové, parquet en point de Hongrie et lustre allumé",
+      "focale": "62% 50%"
+    },
+    "tableau": { "fichier": "stock/electricien/tableau-electrique-02.jpg", "alt": "Tableau électrique ouvert avec disjoncteurs modulaires et câblage repéré" },
+    "controle": { "fichier": "stock/electricien/tableau-electrique-01.jpg", "alt": "Contrôle au multimètre des connexions d'un tableau électrique", "focale": "40% 50%" },
+    "suspensions": { "fichier": "stock/electricien/luminaires-suspensions-02.jpg", "alt": "Suspensions cuivrées allumées au-dessus d'une table" },
+    "interrupteur": { "fichier": "stock/electricien/interrupteur-laiton-01.jpg", "alt": "Interrupteur à levier en laiton sur une plaque blanche" },
+    "chantier": { "fichier": "stock/electricien/electricien-chantier-01.jpg", "alt": "Électricien perçant un mur pour poser une prise dans un appartement en rénovation", "focale": "50% 40%" },
+    "prise": { "fichier": "stock/electricien/pose-prise-01.jpg", "alt": "Pose d'un double mécanisme de prise au tournevis" }
+  },
+  "entete": { "variante": "double" },
+  "sections": [
+    {
+      "type": "hero",
+      "variante": "photo",
+      "contenu": {
+        "surtitre": "Électricien à Villeurbanne",
+        "titre": "Votre électricien à Villeurbanne, du dépannage à la rénovation",
+        "titreAccent": "du dépannage à la rénovation",
+        "sousTitre": "Disjoncteur qui saute, tableau à remettre aux normes, appartement à recâbler : parlez directement à Karim Haddad, ou décrivez votre besoin pour recevoir un devis.",
+        "image": "hero",
+        "afficherNote": true,
+        "reperes": ["Atelier à Villeurbanne depuis 2016"]
+      }
+    },
+    {
+      "type": "services",
+      "variante": "cartes",
+      "contenu": {
+        "surtitre": "Prestations",
+        "titre": "Du disjoncteur qui saute au logement entièrement recâblé",
+        "intro": "Appartements des Gratte-Ciel, maisons de ville de Cusset ou pavillons des Buers : chaque intervention commence par un diagnostic et un devis écrit.",
+        "items": [
+          {
+            "titre": "Dépannage électrique",
+            "icone": "zap",
+            "texte": "Plus de courant dans une pièce, un différentiel qui saute, une prise qui chauffe : on trouve la cause, on répare, et on vous explique ce qui s'est passé."
+          },
+          {
+            "titre": "Mise aux normes",
+            "icone": "shield-check",
+            "texte": "Absence de terre, tableau vétuste, pas de différentiel 30 mA : remise en conformité NF C 15-100 pour vivre, louer ou vendre sans mauvaise surprise."
+          },
+          {
+            "titre": "Tableau électrique",
+            "icone": "circuit-board",
+            "texte": "Remplacement complet ou ajout de circuits, avec un repérage clair de chaque disjoncteur pour savoir quoi couper le jour où il le faut."
+          },
+          {
+            "titre": "Rénovation complète",
+            "icone": "house",
+            "texte": "Appartement à refaire : câblage neuf, prises et points lumineux pensés pièce par pièce, en coordination avec le plaquiste et le peintre."
+          },
+          {
+            "titre": "Éclairage",
+            "icone": "lamp-ceiling",
+            "texte": "Suspensions, spots encastrés, rubans LED, éclairage extérieur : pose, raccordement et variateurs, pour une lumière adaptée à chaque pièce."
+          },
+          {
+            "titre": "VMC et chauffage",
+            "icone": "fan",
+            "texte": "VMC bruyante ou en panne, radiateurs électriques à remplacer, programmation : de quoi mieux respirer et mieux maîtriser la facture."
+          }
+        ]
+      }
+    },
+    {
+      "type": "pourquoi",
+      "variante": "manifeste",
+      "contenu": {
+        "surtitre": "Volta Rhône",
+        "titre": "Un électricien du quartier, joignable et précis.",
+        "intro": "L'entreprise est installée rue Francis-de-Pressensé depuis 2016. Au téléphone comme chez vous, vous avez affaire à la même personne.",
+        "image": "tableau",
+        "items": [
+          {
+            "titre": "Sur place rapidement",
+            "texte": "L'atelier est à quelques minutes des Charpennes, de Grandclément et de Cusset : pas de longue traversée de l'agglomération avant d'arriver chez vous."
+          },
+          {
+            "titre": "Un devis écrit, ligne par ligne",
+            "texte": "Le prix est fixé et expliqué avant les travaux. Seule exception : la mise en sécurité immédiate d'une installation dangereuse."
+          },
+          {
+            "titre": "4,8 sur 5 sur Google",
+            "texte": "64 clients ont noté l'entreprise sur sa fiche Google. Les avis complets se lisent directement sur la fiche."
+          }
+        ]
+      }
+    },
+    {
+      "type": "realisations",
+      "variante": "mosaique",
+      "contenu": {
+        "surtitre": "En images",
+        "titre": "Le genre de travaux que nous faisons",
+        "images": [
+          { "image": "controle", "legende": "Contrôle d'un tableau avant remise en service" },
+          { "image": "suspensions", "legende": "Suspensions au-dessus d'une table" },
+          { "image": "interrupteur", "legende": "Interrupteur à levier en laiton" },
+          { "image": "chantier", "legende": "Pose de boîtiers en rénovation" },
+          { "image": "prise", "legende": "Double prise en cuisine" }
+        ]
+      }
+    },
+    {
+      "type": "avis",
+      "variante": "bandeau",
+      "contenu": {
+        "surtitre": "Avis clients",
+        "titre": "Noté 4,8 sur 5 par ceux qui nous ont fait venir",
+        "texte": "La note est celle de la fiche Google de l'entreprise, sans tri ni sélection."
+      }
+    },
+    {
+      "type": "zone",
+      "variante": "carte",
+      "contenu": {
+        "surtitre": "Zone d'intervention",
+        "titre": "Villeurbanne et l'est lyonnais",
+        "intro": "Nous intervenons à Villeurbanne et dans les communes qui la touchent, du 6e arrondissement jusqu'à Décines."
+      }
+    },
+    {
+      "type": "devis",
+      "variante": "scinde",
+      "contenu": {
+        "surtitre": "Devis",
+        "titre": "Décrivez votre besoin",
+        "intro": "Quelques mots suffisent : ce qui se passe, ou ce que vous voulez faire. Karim Haddad vous rappelle pour en parler et fixer une visite si elle est utile."
+      }
+    }
+  ],
+  "pied": {
+    "variante": "complet",
+    "phrase": "Électricité générale, dépannage et rénovation à Villeurbanne et dans l'est lyonnais."
+  },
+  "seo": {
+    "description": "Électricien à Villeurbanne : dépannage, mise aux normes, tableau électrique et rénovation. Volta Rhône intervient aussi à Bron, Vaulx-en-Velin et Caluire."
+  },
+  "demo": { "actif": true, "agence": "Liverdian", "dateSuppression": "2026-12-02" }
+}

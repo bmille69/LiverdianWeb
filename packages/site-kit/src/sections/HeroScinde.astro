@@ -1,0 +1,62 @@
+---
+/**
+ * Hero « scindé » : texte à gauche sur fond clair, grande image cadrée (cadre signature) à droite.
+ * Bon compromis quand la photo est belle mais chargée (le texte ne passe jamais dessus).
+ */
+import { Picture } from "astro:assets";
+import type { SectionDe } from "../schema.ts";
+import { site } from "../lib/site.ts";
+import { imageRequise } from "../lib/images.ts";
+import { noteFr } from "../lib/format.ts";
+import Surtitre from "../components/Surtitre.astro";
+import TitreHero from "../components/TitreHero.astro";
+import BoutonsHero from "../components/BoutonsHero.astro";
+import Cadre from "../components/Cadre.astro";
+import Etoiles from "../components/Etoiles.astro";
+interface Props {
+  section: SectionDe<"hero">;
+}
+const { contenu: c } = Astro.props.section;
+const img = imageRequise(c.image);
+// La note est affichée en pastille sur l'image (et non sous les boutons) si afficherNote.
+const n = c.afficherNote ? site.entreprise.noteGoogle : undefined;
+---
+
+<section id="haut" aria-labelledby="haut-titre" class="fond-clair relative isolate overflow-hidden">
+  <div class="conteneur grid items-center gap-14 pt-10 pb-20 md:pt-16 md:pb-24 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-16 lg:py-24 xl:gap-24">
+    <div>
+      <Surtitre texte={c.surtitre} />
+      <TitreHero titre={c.titre} accent={c.titreAccent} class="mt-5 text-[2.5rem] leading-[1.04] sm:text-[3.25rem] lg:text-[3.75rem] xl:text-[4.25rem]" />
+      <p class="intro texte-doux mt-6 text-lg! md:text-xl!">{c.sousTitre}</p>
+      <BoutonsHero contenu={{ ...c, afficherNote: false }} class="mt-9" />
+    </div>
+    <div class="relative">
+      <Cadre class="aspect-[4/5] sm:aspect-[5/4] lg:aspect-[4/5]">
+        <Picture
+          src={img.src}
+          alt={img.alt}
+          widths={[480, 720, 960, 1280, 1600].filter((w) => w <= img.src.width)}
+          sizes="(min-width: 1280px) 560px, (min-width: 1024px) 45vw, 100vw"
+          formats={["avif", "webp"]}
+          quality={60}
+          loading="eager"
+          fetchpriority="high"
+          class="h-full w-full object-cover"
+          style={`object-position:${img.focale}`}
+        />
+      </Cadre>
+      {
+        n && (
+          <div class="absolute -bottom-7 left-4 rounded-ui-l border border-trait bg-surface px-5 py-4 shadow-[0_18px_40px_-24px_rgb(0_0_0/0.4)] sm:left-8">
+            <p class="flex items-baseline gap-2">
+              <span class="font-titres text-3xl leading-none">{noteFr(n.valeur)}</span>
+              <span class="texte-doux text-sm">/5 sur Google</span>
+            </p>
+            <Etoiles note={n.valeur} class="mt-2 h-4 w-20 text-accent-texte" />
+            <p class="texte-doux mt-1 text-sm">{n.nombre} avis</p>
+          </div>
+        )
+      }
+    </div>
+  </div>
+</section>

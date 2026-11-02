@@ -1,0 +1,60 @@
+---
+/**
+ * Réalisations « grille » : vignettes régulières 3 colonnes (2 sur tablette), légende sous chaque image.
+ * Plus calme que la mosaïque ; pour 3, 6 ou 8 images.
+ */
+import { Picture } from "astro:assets";
+import type { SectionDe } from "../schema.ts";
+import type { Fond } from "../lib/site.ts";
+import { ancre, demo } from "../lib/site.ts";
+import { imageRequise } from "../lib/images.ts";
+import Section from "../components/Section.astro";
+import TitreSection from "../components/TitreSection.astro";
+interface Props {
+  section: SectionDe<"realisations">;
+  fond: Fond;
+}
+const { section, fond } = Astro.props;
+const c = section.contenu;
+const id = ancre(section);
+---
+
+<Section id={id} fond={fond}>
+  <div class="conteneur">
+    <TitreSection id={id} surtitre={c.surtitre} titre={c.titre} intro={c.intro} />
+    <ul class:list={["mt-12 grid gap-x-5 gap-y-10 sm:grid-cols-2 md:mt-16", c.images.length % 4 === 0 ? "lg:grid-cols-4" : "lg:grid-cols-3"]}>
+      {
+        c.images.map((it, i) => {
+          const img = imageRequise(it.image);
+          return (
+            <li>
+              <figure>
+                <div class="aspect-[4/3] overflow-hidden rounded-ui-l bg-teinte">
+                  <Picture
+                    src={img.src}
+                    alt={img.alt}
+                    widths={[400, 640, 960].filter((w) => w <= img.src.width)}
+                    sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                    formats={["avif", "webp"]}
+                    quality={58}
+                    class="h-full w-full object-cover"
+                    style={`object-position:${img.focale}`}
+                  />
+                </div>
+                {it.legende && (
+                  <figcaption class="mt-3.5 flex gap-3 text-[0.9375rem]">
+                    <span aria-hidden="true" class="font-titres texte-accent tabular-nums">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span>{it.legende}</span>
+                  </figcaption>
+                )}
+              </figure>
+            </li>
+          );
+        })
+      }
+    </ul>
+    {demo && <p class="texte-doux mt-10 text-sm">Photos d’illustration : elles seront remplacées par vos chantiers.</p>}
+  </div>
+</Section>
