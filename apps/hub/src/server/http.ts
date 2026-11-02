@@ -2,12 +2,13 @@ import fastifyStatic from "@fastify/static";
 import Fastify, { type FastifyInstance } from "fastify";
 import { createReadStream, existsSync, readdirSync, realpathSync, statSync } from "node:fs";
 import { extname, join, resolve, sep } from "node:path";
+import * as QRCode from "qrcode";
 import { z } from "zod";
 import { AGENTS } from "../agents/registry.ts";
 import { JOURS, SOURCED_FIELDS, SOURCES, STATUT_LABELS, STATUTS } from "../domain/companies.ts";
 import { HubError } from "../domain/errors.ts";
 import { isSettingKey, type SettingKey } from "../domain/settings.ts";
-import { RECETTES, SITE_STATUT_LABELS, SITE_STATUTS } from "../domain/sites.ts";
+import { RECETTES, SITE_STATUT_LABELS, SITE_STATUTS, type Site } from "../domain/sites.ts";
 import { prerequisMaquette } from "../atelier/brief.ts";
 import { lireUnicite } from "../atelier/registre.ts";
 import { EssaiInput, type Hub } from "../hub.ts";
@@ -54,6 +55,10 @@ const SettingValidators: { [K in SettingKey]: z.ZodType } = {
   "prospection.places.plafondMensuel": z.number().int().min(0, "0 au moins").max(100_000, "100 000 au plus"),
   "prospection.maquettes.parallele": z.number().int().min(1, "Au moins 1").max(4, "4 au plus"),
   "prospection.purge.mois": z.number().int().min(1, "1 mois au moins").max(36, "36 mois au plus"),
+  "agents.moteur": z.enum(["abonnement", "deepseek", "automatique"]),
+  "hebergement.domaine": z.string().trim().max(200).refine((s) => s === "" || /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i.test(s), "Domaine invalide (ex. mondomaine.fr)"),
+  "hebergement.wranglerBin": z.string().trim().max(500),
+  "hebergement.kvNamespaceId": z.string().trim().max(100).regex(/^(|[0-9a-f]{32})$/i, "Identifiant d'espace KV invalide"),
 };
 
 /** Fichier demandé sous un dossier racine, ou null s'il en sort (« .. », lien, chemin absolu). */
@@ -173,9 +178,14 @@ export async function buildServer(hub: Hub, options: ServerOptions): Promise<Fas
       });
 
       // ── Sites ──
+      /** Démo du site, enrichie du lien d'aperçu du propriétaire (jeton HMAC, visites non comptées). */
+      const demoInfo = (site: Site) => {
+        const d = hub.hebergement.demoDe(site.id);
+        return d ? { ...d, apercuUrl: d.etat === "en_ligne" ? `${d.url}?apercu=${hub.hebergement.apercuJeton(d.slug)}` : null } : null;
+      };
       api.get("/sites", async (req) => {
         const q = z.object({ companyId: z.string().max(40).optional(), statut: z.enum(SITE_STATUTS).optional() }).parse(req.query);
-        return { sites: hub.sites.list(q).map((s) => ({ ...s, vignette: existsSync(join(s.dossier, ".atelier", "vignette.jpg")) })) };
+        return { sites: hub.sites.list(q).map((s) => ({ ...s, vignette: existsSync(join(s.dossier, ".atelier", "vignette.jpg")), demo: demoInfo(s) })) };
       });
       api.get<{ Params: { id: string } }>("/sites/:id", async (req) => {
         const site = hub.sites.get(req.params.id);
@@ -183,6 +193,8 @@ export async function buildServer(hub: Hub, options: ServerOptions): Promise<Fas
         return {
           site,
           fabrication: hub.atelier.pourSite(site.id),
+          demo: demoInfo(site),
+          hebergement: { configure: hub.hebergement.configure(), manques: hub.hebergement.manques() },
           fichiers: {
             apercu: existsSync(join(site.dossier, "dist", "index.html")),
             vignette: existsSync(join(site.dossier, ".atelier", "vignette.jpg")),
@@ -194,8 +206,17 @@ export async function buildServer(hub: Hub, options: ServerOptions): Promise<Fas
           unicite: lireUnicite(hub.sites.dirOf(site.id)),
         };
       });
+      /** QR code de l'URL publique de la démo (à scanner avec un téléphone). */
+      api.get<{ Params: { id: string } }>("/sites/:id/qr", async (req, reply) => {
+        const demo = hub.hebergement.demoDe(req.params.id);
+        if (!demo || demo.etat !== "en_ligne") throw new HubError("Aucune démo en ligne pour ce site", 404);
+        const svg = await QRCode.toString(demo.url, { type: "svg", margin: 1, width: 240, errorCorrectionLevel: "M", color: { dark: "#101418", light: "#ffffff" } });
+        reply.header("content-type", "image/svg+xml");
+        reply.header("cache-control", "no-store");
+        return svg;
+      });
       api.get("/fabrications", async (req) => {
-        const q = z.object({ etat: z.enum(["en_cours", "a_valider", "validee", "arretee"]).optional() }).parse(req.query);
+        const q = z.object({ etat: z.enum(["en_cours", "en_attente", "a_valider", "validee", "arretee"]).optional() }).parse(req.query);
         return { fabrications: hub.atelier.list(q).map(({ passes, ...f }) => ({ ...f, passes: passes.map(({ sortie: _s, ...x }) => x) })) };
       });
       api.post<{ Params: { id: string } }>("/sites/:id/valider", async (req) => ({ fabrication: hub.atelier.valider(req.params.id) }));
@@ -207,6 +228,28 @@ export async function buildServer(hub: Hub, options: ServerOptions): Promise<Fas
       api.post<{ Params: { id: string } }>("/sites/:id/reprendre", async (req) => ({ fabrication: hub.atelier.reprendre(req.params.id) }));
       api.post("/sites", async (req, reply) => reply.code(201).send({ site: hub.sites.create(req.body) }));
       api.patch<{ Params: { id: string } }>("/sites/:id", async (req) => ({ site: hub.sites.update(req.params.id, req.body) }));
+
+      // ── Hébergement des démos ──
+      api.get("/hebergement", async () => hub.hebergement.etat());
+      api.post("/hebergement/tester", async () => hub.hebergement.tester());
+      api.post("/hebergement/relever", async () => hub.hebergement.releverVisites());
+      api.post("/hebergement/secrets", async (req) => {
+        const body = z.object({ nom: z.enum(["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN"]), valeur: z.string().nullable() }).parse(req.body);
+        hub.hebergement.enregistrerSecret(body.nom, body.valeur);
+        return hub.hebergement.etat();
+      });
+      api.post<{ Params: { id: string } }>("/sites/:id/publier", async (req, reply) => {
+        const { jobId } = await hub.hebergement.demanderPublier(req.params.id);
+        return reply.code(202).send({ jobId });
+      });
+      api.post<{ Params: { id: string } }>("/sites/:id/retirer-demo", async (req, reply) => {
+        const { jobId } = await hub.hebergement.demanderRetirer(req.params.id);
+        return reply.code(202).send({ jobId });
+      });
+      api.post<{ Params: { id: string } }>("/sites/:id/prolonger-demo", async (req, reply) => {
+        const { jobId } = await hub.hebergement.demanderProlonger(req.params.id);
+        return reply.code(202).send({ jobId });
+      });
 
       // ── Travaux ──
       api.get("/jobs", async (req) => {

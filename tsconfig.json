@@ -14,5 +14,5 @@
     "skipLibCheck": true,
     "isolatedModules": true
   },
-  "include": ["apps/hub/src/**/*.ts", "apps/hub/test/**/*.ts", "apps/hub/scripts/**/*.ts"]
+  "include": ["apps/hub/src/**/*.ts", "apps/hub/test/**/*.ts", "apps/hub/scripts/**/*.ts", "apps/hub/hebergement/**/*.ts"]
 }

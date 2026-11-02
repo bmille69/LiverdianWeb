@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentService } from "../agents/agent-service.ts";
+import { QuotaClaudeError } from "../agents/claude-cli.ts";
 import { now, parseJson, type Db } from "../db/database.ts";
 import type { CompanyService } from "../domain/companies.ts";
 import { HubError, notFound } from "../domain/errors.ts";
@@ -15,7 +16,10 @@ import type { Consigne, Issue, Recette } from "./recette.ts";
 
 export const JOB_ETAPE = "atelier.etape";
 
-export type EtatFabrication = "en_cours" | "a_valider" | "validee" | "arretee";
+/** Reprise automatique des fabrications en attente du quota (ADR-16). */
+const ATTENTE_REPRISE_MS = 15 * 60_000;
+
+export type EtatFabrication = "en_cours" | "a_valider" | "validee" | "arretee" | "en_attente";
 export type EtatPasse = "en_file" | "en_cours" | "ok" | "echec" | "sautee" | "renvoi" | "erreur" | "arret" | "annulee";
 
 export type Passe = {
@@ -43,7 +47,7 @@ export type Fabrication = {
   jobId: string | null;
   tour: number;
   motif: string | null;
-  motifType: "controle" | "technique" | "schema" | "annulee" | null;
+  motifType: "controle" | "technique" | "schema" | "annulee" | "quota" | null;
   refaire: boolean;
   cycle: ResultatControle[];
   renvois: { comptes: Record<string, number>; messages: Record<string, string> };
@@ -109,6 +113,7 @@ export class Atelier {
   readonly #sitesDir: string;
   readonly #now: () => Date;
   #unsubscribe: (() => void) | null = null;
+  readonly #timerAttente: NodeJS.Timeout;
 
   constructor(deps: {
     db: Db;
@@ -145,10 +150,20 @@ export class Atelier {
         queueMicrotask(() => this.#surFinDeTravail(job.id));
       }
     });
+    // Reprise automatique des fabrications en attente du quota : le rétablissement se constate par un vrai appel.
+    this.#timerAttente = setInterval(() => {
+      try {
+        this.reprendreEnAttente();
+      } catch {
+        /* un échec de reprise attendra le prochain tour */
+      }
+    }, ATTENTE_REPRISE_MS);
+    this.#timerAttente.unref();
   }
 
   close(): void {
     this.#unsubscribe?.();
+    clearInterval(this.#timerAttente);
   }
 
   recettes(): Recette[] {
@@ -258,14 +273,28 @@ export class Atelier {
     return this.get(f.id);
   }
 
-  /** Reprend une fabrication arrêtée sur une erreur technique, à l'étape où elle s'est arrêtée. */
+  /** Reprend une fabrication arrêtée sur une erreur technique, ou en attente du quota, à l'étape où elle s'est arrêtée. */
   reprendre(siteId: string): Fabrication {
     const f = this.#derniere(siteId);
-    if (f.etat !== "arretee" || (f.motifType !== "technique" && f.motifType !== "annulee") || !f.etape) throw new HubError("Seule une fabrication arrêtée par une erreur ou une annulation se reprend.", 409);
+    const attente = f.etat === "en_attente" && f.motifType === "quota";
+    const arretee = f.etat === "arretee" && (f.motifType === "technique" || f.motifType === "annulee");
+    if ((!arretee && !attente) || !f.etape) throw new HubError("Seule une fabrication arrêtée par une erreur, une annulation ou le quota se reprend.", 409);
     this.#maj(f.id, { etat: "en_cours", motif: null, motif_type: null, finished_at: null });
     this.#sites.update(siteId, { statut: "en_fabrication" });
     this.#demarrer(this.get(f.id), f.etape);
     return this.get(f.id);
+  }
+
+  /** Reprise automatique de toutes les fabrications en attente du quota. Retourne le nombre relancées. */
+  reprendreEnAttente(): number {
+    let n = 0;
+    for (const f of this.list({ etat: "en_attente" })) {
+      if (f.motifType !== "quota" || !f.etape) continue;
+      this.#events.append({ type: "atelier.reprise", subject: `site:${f.siteId}`, message: `Nouvel essai après l'attente du quota : ${f.etape}`, data: { fabricationId: f.id } });
+      this.reprendre(f.siteId);
+      n++;
+    }
+    return n;
   }
 
   /**
@@ -351,24 +380,46 @@ export class Atelier {
     const site = this.#sites.get(f.siteId);
     const dernierTour = f.tours[f.tours.length - 1];
     ctx.progress({ label: def.label, pct: null });
-    return def.run({
-      fabricationId: f.id,
-      siteId: f.siteId,
-      siteDir: this.#sites.dirOf(f.siteId),
-      sitesDir: this.#sitesDir,
-      company: this.#companies.get(site.companyId),
-      recette,
-      tour: f.tour,
-      renvoi: f.renvois.messages[input.etape] ?? null,
-      consignes: input.etape === recette.correction.etape ? (dernierTour?.consignes ?? []) : [],
-      exigences: f.exigences,
-      refaire: f.refaire,
-      agents: this.#agents,
-      kit: this.#kit,
-      registre: this.#registre,
-      job: ctx,
-      now: this.#now,
-    });
+    try {
+      return await def.run({
+        fabricationId: f.id,
+        siteId: f.siteId,
+        siteDir: this.#sites.dirOf(f.siteId),
+        sitesDir: this.#sitesDir,
+        company: this.#companies.get(site.companyId),
+        recette,
+        tour: f.tour,
+        renvoi: f.renvois.messages[input.etape] ?? null,
+        consignes: input.etape === recette.correction.etape ? (dernierTour?.consignes ?? []) : [],
+        exigences: f.exigences,
+        refaire: f.refaire,
+        agents: this.#agents,
+        kit: this.#kit,
+        registre: this.#registre,
+        job: ctx,
+        now: this.#now,
+      });
+    } catch (err) {
+      // Limite de l'abonnement (ADR-16) : la fabrication se met en pause tout de suite, avant toute
+      // reprise de la file, et attend le rétablissement (reprise automatique ou manuelle).
+      if (err instanceof QuotaClaudeError) {
+        const actuelle = this.get(input.fabricationId);
+        if (actuelle.jobId === ctx.job.id && actuelle.etat === "en_cours") {
+          this.#majPasse(actuelle, ctx.job.id, { etat: "erreur", fin: now(), resume: "Limite de l'abonnement atteinte : mise en attente" });
+          this.#maj(actuelle.id, { job_id: null });
+          this.#attendre(this.get(actuelle.id));
+        }
+      }
+      throw err;
+    }
+  }
+
+  /** Mise en attente : le quota est épuisé, la fabrication repartira seule (ou à la demande). */
+  #attendre(f: Fabrication): void {
+    const motif = "Limite de l'abonnement Claude atteinte : en attente du rétablissement du quota.";
+    this.#maj(f.id, { etat: "en_attente", motif, motif_type: "quota", finished_at: null });
+    const site = this.#sites.get(f.siteId);
+    this.#events.append({ type: "atelier.attente", subject: `site:${f.siteId}`, message: `${site.companyName} : ${motif}`, data: { fabricationId: f.id } });
   }
 
   #surFinDeTravail(jobId: string): void {

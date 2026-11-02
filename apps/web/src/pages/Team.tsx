@@ -94,11 +94,13 @@ export function TeamPage() {
       <section className="section">
         <div className="section-head">
           <h2 className="section-title">Appels récents</h2>
-          <span className="muted small">Coût indicatif sur 7 jours : {usd(total7)} (l'abonnement Max couvre les appels Claude)</span>
+          <span className="muted small">
+            Coût indicatif sur 7 jours : {usd(total7)} (abonnement Max pour Claude, tarif DeepSeek pour le reste)
+          </span>
         </div>
         {!calls.data?.calls.length ? (
           <Empty icon="bot" title="Aucun appel pour l'instant">
-            Chaque appel à un agent (durée, modèle, coût indicatif) sera listé ici.
+            Chaque appel à un agent (moteur, durée, modèle, coût indicatif) sera listé ici.
           </Empty>
         ) : (
           <div className="table-wrap">
@@ -107,6 +109,7 @@ export function TeamPage() {
                 <tr>
                   <th>Quand</th>
                   <th>Agent</th>
+                  <th>Moteur</th>
                   <th>Modèle</th>
                   <th>Mode</th>
                   <th>Objet</th>
@@ -121,6 +124,11 @@ export function TeamPage() {
                     <td>
                       <span className="agent-dot" style={{ background: names[c.agent]?.couleur }} />
                       {names[c.agent]?.nom ?? c.agent}
+                    </td>
+                    <td>
+                      <span className={`badge ${c.engine === "deepseek" ? "tone-blue" : "tone-muted"}`} title={c.engine === "deepseek" ? "DeepSeek (facturé à l'usage)" : "Abonnement Claude Code Max"}>
+                        {c.engine === "deepseek" ? "DeepSeek" : "Abonnement"}
+                      </span>
                     </td>
                     <td className="mono">{c.model}</td>
                     <td>{MODE_LABEL[c.mode] ?? c.mode}</td>
@@ -213,7 +221,7 @@ function TryAgent({ agent, onClose, onStarted }: { agent: Agent | null; onClose:
       }
     >
       <div className="form">
-        <p className="muted small">L'essai passe par la file de travaux : vous suivez la réponse en direct. Il utilise votre abonnement Claude.</p>
+        <p className="muted small">L'essai passe par la file de travaux : vous suivez la réponse en direct. Il suit le moteur choisi dans Réglages › Agents.</p>
         <label className="field wide">
           <span className="field-label">Question</span>
           <textarea rows={5} value={question} onChange={(e) => setQuestion(e.target.value)} />

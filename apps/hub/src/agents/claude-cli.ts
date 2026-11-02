@@ -5,10 +5,32 @@ import { randomUUID } from "node:crypto";
 import { Semaphore } from "./semaphore.ts";
 
 export class ClaudeCliError extends Error {
-  constructor(message: string) {
+  readonly code: string;
+  constructor(message: string, code = "echec") {
     super(message);
     this.name = "ClaudeCliError";
+    this.code = code;
   }
+}
+
+/** La limite de l'abonnement Claude est atteinte : l'appel n'a pas pu être servi (ADR-16). */
+export class QuotaClaudeError extends ClaudeCliError {
+  constructor(message = "Limite de l'abonnement Claude atteinte : la fabrication attendra le rétablissement du quota.") {
+    super(message, "quota");
+    this.name = "QuotaClaudeError";
+  }
+}
+
+/**
+ * Messages vus dans les sorties de Claude Code quand l'abonnement est épuisé (chaînes du binaire et
+ * retours d'API : « Usage limit reached », « weekly limit », « grace window », et leurs équivalents français).
+ */
+const LIMITE_ABONNEMENT =
+  /usage limit reached|usage limit|limit reached|grace window|credit balance (?:is )?too low|weekly limit|session limit|opus limit|sonnet limit|limite (?:d'utilisation |hebdomadaire |de session )?(?:de votre abonnement )?(?:atteinte|dépassée)|quota (?:claude )?(?:atteint|dépassé)/i;
+
+/** La sortie du CLI dit-elle que la limite de l'abonnement est atteinte ? */
+export function estLimiteAbonnement(texte: string): boolean {
+  return LIMITE_ABONNEMENT.test(texte);
 }
 
 /**
@@ -64,11 +86,30 @@ export function assertSafeArgs(args: string[]): void {
 
 /**
  * Environnement de l'enfant : l'abonnement Max de Claude Code, jamais une clé d'API (CLAUDE.md).
- * Une ANTHROPIC_API_KEY présente ferait facturer l'appel à l'API : elle est retirée.
+ * Toute variable de connexion Anthropic présente (ANTHROPIC_API_KEY, jeton ou URL de base d'un autre
+ * fournisseur) est retirée : elle ferait facturer l'appel ailleurs ou changerait le moteur.
  */
 export function childEnv(base: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...base };
-  for (const key of Object.keys(env)) if (key.toUpperCase() === "ANTHROPIC_API_KEY") delete env[key];
+  for (const key of Object.keys(env)) {
+    if (key.toUpperCase() === "ANTHROPIC_API_KEY" || key.toUpperCase() === "ANTHROPIC_AUTH_TOKEN" || key.toUpperCase() === "ANTHROPIC_BASE_URL") delete env[key];
+  }
+  return env;
+}
+
+/**
+ * Environnement du moteur DeepSeek : le même CLI `claude`, branché sur l'API compatible Anthropic de
+ * DeepSeek (ADR-16). La clé n'existe que dans l'environnement de l'enfant, jamais dans un journal.
+ */
+export function deepseekEnv(apiKey: string, base: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
+  const env = childEnv(base);
+  env.ANTHROPIC_BASE_URL = "https://api.deepseek.com/anthropic";
+  env.ANTHROPIC_AUTH_TOKEN = apiKey;
+  env.ANTHROPIC_MODEL = "deepseek-v4-pro";
+  env.ANTHROPIC_DEFAULT_OPUS_MODEL = "deepseek-v4-pro";
+  env.ANTHROPIC_DEFAULT_SONNET_MODEL = "deepseek-v4-pro";
+  env.ANTHROPIC_DEFAULT_HAIKU_MODEL = "deepseek-flash";
+  env.CLAUDE_CODE_SUBAGENT_MODEL = "deepseek-flash";
   return env;
 }
 
@@ -167,6 +208,8 @@ export type ClaudeRequest = {
   onEvent?: (e: ClaudeEvent) => void;
   /** Fichier où recopier le flux brut (atelier). */
   streamLog?: string;
+  /** Environnement de l'enfant (moteur DeepSeek) ; absent = connexion de l'abonnement. */
+  env?: NodeJS.ProcessEnv;
 };
 
 export type ClaudeResult = {
@@ -175,6 +218,8 @@ export type ClaudeResult = {
   costUsd: number | null;
   durationMs: number;
   model: string;
+  /** Jetons consommés (flux stream-json), pour recalculer le coût d'un moteur tiers. */
+  usage: { input: number; output: number } | null;
   /** Outils refusés par les permissions pendant l'appel. */
   denials: { tool: string; input: unknown }[];
 };
@@ -223,17 +268,25 @@ export class ClaudeCli {
       }
       const final = await this.#exec(args, cwd, req);
       if (final.is_error || final.subtype !== "success") {
+        // La limite de l'abonnement est une condition connue (ADR-16) : elle porte son propre type.
+        const texte = `${String(final.subtype)} ${String(final.result ?? "")}`;
+        if (estLimiteAbonnement(texte)) throw new QuotaClaudeError();
         throw new ClaudeCliError(`Claude Code a échoué (${String(final.subtype)}) : ${String(final.result ?? "").slice(0, 300)}`);
       }
       const denials = Array.isArray(final.permission_denials)
         ? (final.permission_denials as { tool_name?: string; tool_input?: unknown }[]).map((d) => ({ tool: String(d.tool_name ?? "?"), input: d.tool_input ?? null }))
         : [];
+      const usageRaw = (final.usage ?? {}) as { input_tokens?: number; output_tokens?: number };
       return {
         text: String(final.result ?? ""),
         structured: final.structured_output ?? null,
         costUsd: typeof final.total_cost_usd === "number" ? final.total_cost_usd : null,
         durationMs: Date.now() - started,
         model: req.model,
+        usage:
+          typeof usageRaw.input_tokens === "number" || typeof usageRaw.output_tokens === "number"
+            ? { input: usageRaw.input_tokens ?? 0, output: usageRaw.output_tokens ?? 0 }
+            : null,
         denials,
       };
     } finally {
@@ -244,10 +297,11 @@ export class ClaudeCli {
   #exec(args: string[], cwd: string, req: ClaudeRequest): Promise<Record<string, unknown>> {
     const timeoutMs = req.timeoutMs ?? (req.mode === "atelier" ? 30 * 60_000 : 180_000);
     return new Promise((resolve, reject) => {
-      const child = this.#spawn(this.#binary, args, { cwd, windowsHide: true, stdio: ["pipe", "pipe", "pipe"], env: childEnv() });
+      const child = this.#spawn(this.#binary, args, { cwd, windowsHide: true, stdio: ["pipe", "pipe", "pipe"], env: req.env ?? childEnv() });
       let buffer = "";
       let stderr = "";
       let final: Record<string, unknown> | null = null;
+      let quotaVu = false;
       let settled = false;
       let linger: NodeJS.Timeout | null = null;
       const fail = (message: string) => {
@@ -260,7 +314,8 @@ export class ClaudeCli {
         } catch {
           /* déjà terminé */
         }
-        reject(new ClaudeCliError(message));
+        // La limite de l'abonnement est reconnue même quand le CLI s'arrête sans résultat structuré.
+        reject(quotaVu || estLimiteAbonnement(`${message} ${stderr}`) ? new QuotaClaudeError() : new ClaudeCliError(message));
       };
       const timer = setTimeout(() => fail(`Claude Code n'a pas répondu en ${Math.round(timeoutMs / 1000)} s`), timeoutMs);
       const onAbort = () => fail("Appel annulé");
@@ -293,6 +348,7 @@ export class ClaudeCli {
           }
           if (msg.type === "result") {
             final = msg;
+            if (estLimiteAbonnement(line)) quotaVu = true;
             // Le résultat est rendu mais un processus fils (serveur lancé par l'agent) peut retenir Claude Code :
             // après un délai de grâce, l'arbre est fermé et le résultat gardé.
             linger ??= setTimeout(() => killTree(child.pid), 15_000);

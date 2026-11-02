@@ -270,6 +270,59 @@ export const MIGRATIONS: string[] = [
   );
   CREATE INDEX registre_sites_metier ON registre_sites (metier);
   `,
+  `
+  -- Hébergement des démos (brief F) : une fiche par site publié. Le slug est stable une fois choisi (unique) ;
+  -- l'état suit le cycle en_ligne → expiree (J+30) / retiree (manuel). Les visites sont relevées depuis le KV
+  -- du Worker (compteur total + dates), jamais stockées individuellement.
+  CREATE TABLE demos (
+    site_id TEXT PRIMARY KEY REFERENCES sites (id) ON DELETE CASCADE,
+    slug TEXT NOT NULL UNIQUE,
+    url TEXT NOT NULL,
+    etat TEXT NOT NULL DEFAULT 'en_ligne' CHECK (etat IN ('en_ligne', 'expiree', 'retiree')),
+    publie_le TEXT,
+    expire_le TEXT,
+    retiree_le TEXT,
+    visites INTEGER NOT NULL DEFAULT 0,
+    derniere_visite TEXT,
+    premiere_ouverture_le TEXT,
+    derniere_publication_le TEXT,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX demos_etat ON demos (etat, expire_le);
+
+  -- Attente du quota (brief F) : une fabrication peut se mettre « en attente » (limite du quota Claude atteinte)
+  -- puis reprendre seule. SQLite ne modifie pas une contrainte CHECK : la table est reconstruite avec ses données.
+  CREATE TABLE fabrications_v2 (
+    id TEXT PRIMARY KEY,
+    site_id TEXT NOT NULL REFERENCES sites (id) ON DELETE CASCADE,
+    recette TEXT NOT NULL,
+    etat TEXT NOT NULL CHECK (etat IN ('en_cours', 'a_valider', 'validee', 'arretee', 'en_attente')),
+    etape TEXT,
+    job_id TEXT,
+    tour INTEGER NOT NULL DEFAULT 0,
+    motif TEXT,
+    motif_type TEXT,
+    refaire INTEGER NOT NULL DEFAULT 0,
+    cycle_json TEXT NOT NULL DEFAULT '[]',
+    renvois_json TEXT NOT NULL DEFAULT '{}',
+    exigences_json TEXT NOT NULL DEFAULT '[]',
+    passes_json TEXT NOT NULL DEFAULT '[]',
+    tours_json TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    finished_at TEXT
+  );
+  INSERT INTO fabrications_v2 SELECT id, site_id, recette, etat, etape, job_id, tour, motif, motif_type, refaire, cycle_json, renvois_json, exigences_json, passes_json, tours_json, created_at, updated_at, finished_at FROM fabrications;
+  DROP TABLE fabrications;
+  ALTER TABLE fabrications_v2 RENAME TO fabrications;
+  CREATE INDEX fabrications_site ON fabrications (site_id, created_at);
+  CREATE INDEX fabrications_etat ON fabrications (etat, updated_at);
+  `,
+  `
+  -- Moteur des agents (brief F, ADR-16) : chaque appel enregistre le moteur réellement utilisé.
+  -- « abonnement » (Claude Code Max) ou « deepseek » (le même CLI branché sur DeepSeek).
+  ALTER TABLE agent_calls ADD COLUMN engine TEXT NOT NULL DEFAULT 'abonnement';
+  `,
 ];
 
 export function openDatabase(path: string): Db {

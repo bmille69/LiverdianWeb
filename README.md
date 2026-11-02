@@ -59,7 +59,7 @@ Pour arrêter : revenez dans le terminal et faites **Ctrl+C**.
    10 à 40 minutes selon le nombre de tours de correction.
 4. Quand tous les contrôles passent, la maquette arrive dans **Aujourd'hui › À valider** avec son aperçu (mobile et
    ordinateur côte à côte, plein écran, ou dans un onglet). Trois choix :
-   - **Valider** : la démo est prête (sa mise en ligne arrivera avec le module Commercial) ;
+   - **Valider** : la démo est prête à être mise en ligne (voir « Mettre les démos en ligne » ci-dessous) ;
    - **Demander des modifications** : votre texte est transmis mot pour mot à l'Intégrateur, puis tout est recontrôlé ;
    - **Refaire** : un nouveau design, depuis la direction artistique.
 
@@ -110,6 +110,53 @@ entreprises. Avec elle, chaque fiche les reçoit.
 
 Relancez ensuite une campagne : les réponses déjà obtenues sont en cache, seules les recherches Places sont nouvelles.
 
+### Mettre les démos en ligne
+
+Une maquette **validée** se publie en un clic sur `https://<nom>.demo.votre-domaine.fr` : le client la voit dans son
+navigateur, sans rien installer. Elle est retirée automatiquement après 30 jours (date affichée), et n'apparaît
+jamais dans Google. Il faut une fois, avant la première publication :
+
+1. Sur https://dash.cloudflare.com, créez un compte (gratuit) et ajoutez-y votre domaine (le plan gratuit suffit).
+2. Notez l'**ID du compte** : en bas de la page d'accueil du tableau de bord, « ID du compte ».
+3. Créez un **jeton d'API** : votre photo de profil en haut à droite › **Mon profil › Jetons API › Créer un jeton ›
+   Personnalisé**, permissions :
+   - Zone › DNS › **Edit**
+   - Zone › Zone › **Read**
+   - Compte › Workers Routes › **Edit**
+   - Compte › Workers KV Storage › **Edit**
+   - Compte › Workers Scripts › **Edit**
+
+   (Ressources de zone : votre domaine, ou « Toutes les zones ». Enregistrez, puis copiez le jeton : il ne sera plus
+   jamais affiché.)
+4. Dans Liverdian, **Réglages › Hébergement** : collez l'ID du compte et le jeton, saisissez votre domaine, puis
+   **Tester la connexion**. Chaque point doit être vert ; la liste dit précisément ce qui manque sinon.
+   Tout est rangé dans `.data\settings\secrets.json`, jamais réaffiché ni écrit dans les journaux.
+5. Sur l'écran d'une maquette validée, cliquez **Mettre en ligne**. La première publication crée tout (route, DNS,
+   envoi des fichiers) et peut prendre une ou deux minutes ; ensuite c'est immédiat.
+
+La carte du site montre l'URL à copier, un code QR, le nombre de visites (« Ouverte 3 fois, dernière visite hier
+18 h 42 ») et la date de retrait automatique, avec **Prolonger de 30 jours** et **Retirer**. Le compteur ignore les
+robots et vos propres visites (le lien « Aperçu » ouvre la démo sans la compter). Après retrait ou échéance,
+l'adresse répond « Cette maquette a expiré » et le site redevient « Démo prête ».
+
+### Moteur des agents (secours quand l'abonnement est à sa limite)
+
+Les agents passent toujours par Claude Code et votre abonnement Max. Quand l'abonnement répond « limite atteinte »,
+Liverdian peut repartir aussitôt sur **DeepSeek** (facturé à l'usage, quelques dixièmes de centime par appel) :
+
+1. Créez une clé sur https://platform.deepseek.com (compte, puis « API Keys »).
+2. Dans Liverdian, **Réglages › Prospection › Clé DeepSeek** (ou variable `DEEPSEEK_API_KEY`).
+3. **Réglages › Travaux et agents › Moteur des agents** :
+   - **Abonnement** (défaut) : tout passe par Claude Code.
+   - **DeepSeek** : tout passe par DeepSeek, sauf la lecture d'images.
+   - **Automatique** : l'abonnement d'abord ; à la première réponse « limite atteinte », l'appel repart aussitôt
+     sur DeepSeek.
+
+La **lecture d'images** (revues visuelles, contrôles d'écran) reste toujours sur l'abonnement : DeepSeek ne lit pas
+les images. Si la limite tombe au milieu d'une revue, la fabrication attend (« en attente du quota Claude ») et
+reprend d'elle-même toutes les 15 minutes, ou par le bouton **Reprendre** de l'écran du site. L'écran **Équipe**
+montre quel moteur a servi chaque appel.
+
 ### Raccourcis utiles dans l'interface
 
 - **Ctrl+K** : aller à une page, retrouver une entreprise, créer une fiche.
@@ -126,8 +173,10 @@ Relancez ensuite une campagne : les réponses déjà obtenues sont en cache, seu
 | `LIVERDIAN_PREVIEW_PORT` | port de l'aperçu des sites (`<site>.localhost`) | port de l'interface + 1 |
 | `LIVERDIAN_DATA_DIR` | dossier des données (base, sites, journaux) | `.data` du dépôt |
 | `LIVERDIAN_CLAUDE_BIN` | chemin du programme `claude` s'il n'est pas sur le PATH | `claude` |
-| `DEEPSEEK_API_KEY` | clé DeepSeek : l'Éclaireur l'utilise pour l'audit des prospects (sinon Claude haiku) ; facultative | aucune |
+| `DEEPSEEK_API_KEY` | clé DeepSeek : moteur de secours des agents et audit des prospects ; se saisit aussi dans Réglages ; facultative | aucune |
 | `GOOGLE_PLACES_API_KEY` | clé Google Places (prospection) ; se saisit aussi dans Réglages | aucune |
+| `CLOUDFLARE_ACCOUNT_ID` | identifiant du compte Cloudflare (hébergement des démos) ; se saisit aussi dans Réglages › Hébergement | aucun |
+| `CLOUDFLARE_API_TOKEN` | jeton Cloudflare (hébergement des démos) ; se saisit aussi dans Réglages › Hébergement | aucun |
 
 Exemple dans PowerShell, pour un essai sur un autre port et un dossier séparé :
 
@@ -135,10 +184,10 @@ Exemple dans PowerShell, pour un essai sur un autre port et un dossier séparé 
 $env:LIVERDIAN_PORT = "4399"; $env:LIVERDIAN_DATA_DIR = "C:\Temp\liverdian-essai"; npm start
 ```
 
-La clé DeepSeek peut aussi être rangée dans `.data\settings\secrets.json` :
+La clé DeepSeek (et les secrets Cloudflare) peut aussi être rangée dans `.data\settings\secrets.json` :
 
 ```json
-{ "DEEPSEEK_API_KEY": "votre-clé" }
+{ "DEEPSEEK_API_KEY": "votre-clé", "CLOUDFLARE_ACCOUNT_ID": "…", "CLOUDFLARE_API_TOKEN": "…" }
 ```
 
 Ce fichier n'est jamais commité (tout `.data` est ignoré par Git) et la clé n'apparaît dans aucun journal.

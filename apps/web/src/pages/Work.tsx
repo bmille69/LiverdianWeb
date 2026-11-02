@@ -5,7 +5,7 @@ import { Link, usePath } from "../router.tsx";
 import { Icon } from "../ui/Icon.tsx";
 import { Empty, ErrorNote, PageHeader, Skeleton, timeAgo } from "../ui/common.tsx";
 import { JobDrawer, JobRow } from "./jobs.tsx";
-import { JOB_STATE, RECETTE_LABEL, SITE_STATUT, SiteBadge } from "./labels.tsx";
+import { JOB_STATE, RECETTE_LABEL, SITE_STATUT, SiteBadge, visitesLabel } from "./labels.tsx";
 import { duree, SiteScreen } from "./SiteScreen.tsx";
 
 /** Atelier : les fabrications (en cours, à valider, arrêtées), puis la file de travaux en direct. */
@@ -24,6 +24,7 @@ export function AtelierPage() {
   const all = fabs.data?.fabrications ?? [];
   const groupes: [Fabrication["etat"], string, string][] = [
     ["en_cours", "En fabrication", "Aucune maquette en fabrication. Lancez « Créer la maquette » depuis une fiche entreprise."],
+    ["en_attente", "En attente du quota Claude", ""],
     ["a_valider", "À valider", "Rien n'attend votre validation."],
     ["arretee", "Arrêtées — à revoir", ""],
   ];
@@ -145,6 +146,8 @@ function FabricationRow({ f, job }: { f: Fabrication; job: Job | undefined }) {
             </>
           ) : f.etat === "arretee" ? (
             <span className="text-danger">{f.motif}</span>
+          ) : f.etat === "en_attente" ? (
+            <span className="text-amber">{f.motif}</span>
           ) : (
             <>Tous les contrôles passent</>
           )}
@@ -231,6 +234,15 @@ function SitesList() {
                   {RECETTE_LABEL[s.recette] ?? s.recette}
                   {s.qualiteNote != null && <> · qualité {s.qualiteNote}</>} · {timeAgo(s.updatedAt)}
                 </div>
+                {s.demo?.etat === "en_ligne" && (
+                  <div className="site-card-demo">
+                    <Icon name="external" size={13} />
+                    <a href={s.demo.url} target="_blank" rel="noreferrer" className="mono" onClick={(e) => e.stopPropagation()}>
+                      {s.demo.url.replace(/^https:\/\//, "")}
+                    </a>
+                    <span className="muted"> · {visitesLabel(s.demo)}</span>
+                  </div>
+                )}
               </div>
             </Link>
           ))}

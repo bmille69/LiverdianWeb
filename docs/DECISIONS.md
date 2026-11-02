@@ -371,3 +371,84 @@ qui se recopie : 0,06) et ≤ **0,06** sinon ; teinte d'accent ≥ **25°** entr
 22 paires, 12 signatures, palettes continues, 8 axes de mise en page) et le code refuse ce qui ressemble trop à un site existant.
 Les anciens sites (sans `mise` ni `palette`) restent valides : valeurs par défaut. Limite : le registre compare des empreintes, pas des
 images ; deux sites très différents sur le papier mais proches à l'œil passeraient — la revue visuelle reste le garde-fou.
+
+## ADR-15 — Hébergement des démos : un Worker pour tous les sous-domaines, compteur de visites en KV (brief F, 2 nov. 2026)
+
+**Contexte.** Une maquette validée doit pouvoir être montrée au client avant la vente : une URL publique propre
+(`https://<slug>.demo.<domaine>`) publiée en un clic depuis l'écran du site, retirée automatiquement après 30 jours,
+sans serveur à payer ni opération à connaître (le propriétaire est non développeur). Le hub tourne sur le PC du
+propriétaire : l'infrastructure ne peut être que statique et gratuite.
+
+**Choix.**
+- **Cloudflare Workers Static Assets + KV** : un seul Worker `liverdian-demos` héberge toutes les démos ; le sous-domaine
+  demandé se lit dans l'en-tête **Host** (pas `url.hostname` — en `wrangler dev` local, l'URL est localhost ; vérifié en
+  direct). Une démo = un dossier `.data/hebergement/demos/<slug>` ; le Worker sert `<slug>/<chemin>`, `index.html` pour
+  les dossiers, une 404 en français, et une page 410 « Cette maquette a expiré » quand les fichiers n'existent plus et
+  que la fiche KV dit la démo retirée ou expirée.
+- **Route et DNS créés par le hub** via l'API Cloudflare (route `*.demo.<domaine>/*` et enregistrement DNS wildcard),
+  de façon idempotente à chaque publication et vérifiés par « Tester la connexion » : il faut les deux, l'un sans
+  l'autre ne suffit pas (constaté).
+- **Déploiement par `wrangler deploy` en dépendance du hub** (rien à installer globalement). Le jeton Cloudflare ne
+  passe que par l'environnement du processus enfant, jamais dans un argument ni un journal. Limites vérifiées par le
+  hub avant l'envoi : ≤ 20 000 fichiers, ≤ 25 Mio par fichier, ≤ 10 Gio au total (refus clair en français).
+- **En-têtes** : `X-Robots-Tag: noindex, nofollow` (une démo ne doit jamais concurrencer le futur site du client dans
+  les moteurs de recherche), cache court, et les en-têtes de sécurité usuels (CSP, nosniff, referrer-policy, HSTS).
+- **Compteur de visites en KV**, pas Analytics Engine (produit payant, configuration supplémentaire) ni journal de
+  visites (inutile et moins propre pour le RGPD) : `v:<slug>` = {total, première, dernière}, incrémenté par le Worker.
+  Aucun cookie pour les visiteurs, aucune adresse IP conservée. Les robots sont exclus par User-Agent ; le propriétaire
+  visite sans compter via un lien `?apercu=<jeton HMAC>` qui pose un simple cookie local de session. Le hub relève les
+  compteurs périodiquement et affiche « Ouverte 3 fois, dernière visite hier 18 h 42 » (carte du site, écran du site,
+  réglages) ; événement au premier passage de 0 à 1.
+- **Cycle de vie** : publication en un clic (tous les contrôles verts + hébergement configuré, sinon le bouton explique
+  ce qui manque), « Prolonger de 30 jours », retrait manuel, expiration automatique par le travail quotidien
+  `hebergement.expiration`. Après retrait ou expiration, le site revient « Démo prête ». Le slug vient du nom
+  commercial (sans accents, unique, stable) : rien de personnel dans l'URL.
+
+**Découvertes wrangler vérifiées pour de vrai** (worker lancé en local, deux démos servies selon le Host, captures sous
+Edge) :
+- Configuration déployée : `assets: { directory, binding: "ASSETS", run_worker_first: true }` (vérifié en `wrangler dev`
+  à la relecture : deux démos servies selon le Host, 404 propre, et `/<autre-slug>/…` refusé depuis un autre
+  sous-domaine). La première version (`run_worker_first: ["/"]` sans `binding`) aurait planté en production
+  (`env.ASSETS` absent) et laissé les fichiers servis sans passer par le Worker (ni noindex ni compteur).
+- `wrangler deploy` des Static Assets est incrémental : « No updated asset files to upload » quand rien n'a changé est
+  un succès, pas une erreur (à ne pas confondre avec un échec du déploiement).
+- Les écritures qui suivent la réponse (compteur) doivent être enregistrées avec `ctx.waitUntil` de façon **synchrone**
+  avant le retour du handler, sinon workerd les abandonne (vérifié en direct).
+
+**Conséquences.** Chaque maquette validée est montrable en un clic avec une URL propre, et disparaît seule à J+30.
+Limites assumées : l'expiration automatique suppose le hub démarré le jour de l'échéance (rattrapage au démarrage
+suivant, la page 410 ne protège que les démos déjà retirées) ; le compteur KV est indicatif (écriture incrémentale,
+pas de journal détaillé). Au moment de l'ADR, le hub n'a jamais été branché sur un vrai compte Cloudflare :
+`scripts/test-hebergement-reel.mjs` fait le tour complet (publication, visites, aperçu, prolongation, retrait) une
+fois les secrets saisis dans Réglages › Hébergement.
+
+## ADR-16 — Moteur des agents de secours : DeepSeek via le même CLI, vision toujours sur l'abonnement (brief F, 2 nov. 2026)
+
+**Contexte.** Les limites de l'abonnement Max (session, hebdomadaire) peuvent tomber au milieu d'une fabrication ou
+d'une campagne et arrêter le travail. Il faut un moteur de secours qui respecte la règle du dépôt (jamais de clé
+`ANTHROPIC_API_KEY`, les agents passent par le CLI `claude`), sans rien changer au chemin principal ni aux contrôles.
+
+**Choix.**
+- **Réglage « Moteur des agents »** (Réglages › Travaux et agents) : `abonnement` (défaut), `deepseek`, `automatique`.
+  DeepSeek passe par le même CLI `claude`, branché sur l'API compatible Anthropic de DeepSeek
+  (`ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic`, `ANTHROPIC_AUTH_TOKEN`, modèles `deepseek-v4-pro` /
+  `deepseek-flash`). Ces variables ne sont posées que dans l'environnement du processus enfant — jamais dans la base,
+  les journaux ou un argument.
+- **Détection de la limite** (`estLimiteAbonnement`, motifs anglais et français observés dans la sortie du CLI) :
+  l'erreur devient `QuotaClaudeError`. En `automatique`, l'appel repart aussitôt sur DeepSeek ; l'échec de
+  l'abonnement est journalisé avant le repli (tout reste visible). Sans clé DeepSeek : message clair, pas de repli.
+- **La vision reste toujours sur l'abonnement.** Vérifié pour de vrai le 02/11/2026 avec le vrai CLI branché sur
+  DeepSeek : l'outil Read répond « format non pris en charge » — DeepSeek ne lit pas les images par cette voie. Jamais
+  de revue visuelle à l'aveugle. En `automatique`, une étape de vision qui tombe sur la limite met la fabrication
+  « en attente du quota Claude » (motif explicite, visible sur la frise) : reprise automatique toutes les 15 minutes
+  ou manuelle par « Reprendre », sans perte.
+- **Coût affiché au tarif réel** : le CLI annonce le coût au tarif de l'abonnement ; pour DeepSeek le hub le recalcule
+  à partir de l'usage exact du flux (`usage.input_tokens` / `output_tokens`) aux tarifs DeepSeek (0,27 $/M en entrée,
+  1,1 $/M en sortie).
+- **Traçabilité** : colonne `engine` dans `agent_calls` (migration 6), affichée sur l'écran Équipe (« Abonnement » /
+  « DeepSeek »).
+
+**Conséquences.** L'abonnement reste le chemin principal et gratuit ; DeepSeek est optionnel et facturé à l'usage
+(quelques dixièmes de centime par appel d'agent). Limites : le repli couvre le quota de l'abonnement, pas une panne
+du CLI lui-même ; un appel structuré réel a été vérifié sur DeepSeek, mais pas une fabrication atelier complète —
+la qualité du travail atelier sur DeepSeek reste à évaluer lors d'un vrai usage.

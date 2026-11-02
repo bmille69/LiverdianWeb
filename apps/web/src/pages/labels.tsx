@@ -1,5 +1,6 @@
-import type { JobState, SiteStatut, Source, Statut } from "../api.ts";
+import type { Demo, JobState, SiteStatut, Source, Statut } from "../api.ts";
 import { Icon } from "../ui/Icon.tsx";
+import { timeAgo } from "../ui/common.tsx";
 
 export const STATUT: Record<Statut, { label: string; tone: string }> = {
   prospect: { label: "Prospect", tone: "neutral" },
@@ -84,4 +85,22 @@ export function SourceTag({ source }: { source: Source | undefined }) {
       {SOURCE_LABEL[source]}
     </span>
   );
+}
+
+// ── Démo en ligne (brief F) ──────────────────────────────────────────────
+
+/** « hier à 18 h 42 » pour une visite récente, « le 3 novembre » au-delà d'une semaine. */
+export function derniereVisiteLabel(iso: string): string {
+  const t = new Date(iso);
+  const s = (t.getTime() - Date.now()) / 1000;
+  const abs = Math.abs(s);
+  if (abs < 45) return "à l'instant";
+  if (abs < 86400 * 7) return `${timeAgo(iso)} à ${t.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`;
+  return `le ${t.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}`;
+}
+
+/** « Ouverte 3 fois, dernière visite hier à 18 h 42 » — compteur relevé depuis le Worker. */
+export function visitesLabel(d: Demo): string {
+  if (d.visites === 0) return "Pas encore ouverte";
+  return `Ouverte ${d.visites} fois${d.derniereVisite ? ` · dernière visite ${derniereVisiteLabel(d.derniereVisite)}` : ""}`;
 }

@@ -20,6 +20,14 @@ export const SETTING_DEFAULTS = {
   "prospection.maquettes.parallele": 1,
   /** Purge des prospects non convertis, en mois sans activité (RGPD). */
   "prospection.purge.mois": 6,
+  /** Moteur des agents : « abonnement » (Claude Code Max), « deepseek » (via le CLI claude), « automatique » (abonnement, puis DeepSeek quand la limite est atteinte). */
+  "agents.moteur": "abonnement" as "abonnement" | "deepseek" | "automatique",
+  /** Hébergement des démos : domaine racine de la zone Cloudflare (ex. mondomaine.fr → *.demo.mondomaine.fr). */
+  "hebergement.domaine": "" as string,
+  /** Chemin d'un script wrangler personnalisé (essais) ; vide = celui du dépôt. */
+  "hebergement.wranglerBin": "" as string,
+  /** Espace KV Cloudflare des compteurs de visites, posé à la première publication. */
+  "hebergement.kvNamespaceId": "" as string,
 } as const;
 
 export type SettingKey = keyof typeof SETTING_DEFAULTS;

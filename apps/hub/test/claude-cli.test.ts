@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { assertSafeArgs, ATELIER_COMMANDS, buildAtelierArgs, buildChatArgs, childEnv, ClaudeCli } from "../src/agents/claude-cli.ts";
+import { assertSafeArgs, ATELIER_COMMANDS, buildAtelierArgs, buildChatArgs, childEnv, ClaudeCli, deepseekEnv, estLimiteAbonnement, QuotaClaudeError } from "../src/agents/claude-cli.ts";
 import { fakeSpawner, tempDir, testHub } from "./helpers.ts";
 
 const DANGEROUS = ["--dangerously-skip-permissions", "--allow-dangerously-skip-permissions", "bypassPermissions", "acceptEdits", "auto"];
@@ -62,6 +62,52 @@ describe("arguments du CLI claude", () => {
     expect(env.anthropic_api_key).toBeUndefined();
     expect(env.PATH).toBe("/bin");
     expect(env.ANTHROPIC_MODEL).toBe("m");
+  });
+});
+
+describe("moteur de secours (brief F)", () => {
+  it("reconnaît les messages de limite de l'abonnement, anglais et français", () => {
+    for (const t of [
+      "Usage limit reached for subscription.",
+      "You've reached your usage limit for this session",
+      "Your usage limit has been reached",
+      "weekly limit reached",
+      "session limit reached",
+      "Opus limit reached",
+      "Sonnet limit reached",
+      "usage credit limit reached",
+      "credit balance is too low",
+      "credit balance too low",
+      "grace window active",
+      "Limite d'utilisation atteinte",
+      "Limite hebdomadaire atteinte",
+      "Limite de session de votre abonnement atteinte",
+      "Limite d'utilisation dépassée",
+      "Quota atteint",
+      "Quota Claude dépassé",
+    ]) expect(estLimiteAbonnement(t), t).toBe(true);
+    for (const t of ["Résultat normal", "Le build est passé", "Erreur réseau", "Le site respecte la limite de vitesse"]) expect(estLimiteAbonnement(t), t).toBe(false);
+  });
+
+  it("deepseekEnv : le même CLI branché sur DeepSeek, sans rien laisser de la connexion Anthropic", () => {
+    const env = deepseekEnv("sk-cle-deepseek", { ANTHROPIC_API_KEY: "sk-x", PATH: "/bin" });
+    expect(env.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(env.ANTHROPIC_AUTH_TOKEN).toBe("sk-cle-deepseek");
+    expect(env.ANTHROPIC_BASE_URL).toBe("https://api.deepseek.com/anthropic");
+    expect(env.ANTHROPIC_MODEL).toBe("deepseek-v4-pro");
+    expect(env.ANTHROPIC_DEFAULT_OPUS_MODEL).toBe("deepseek-v4-pro");
+    expect(env.ANTHROPIC_DEFAULT_SONNET_MODEL).toBe("deepseek-v4-pro");
+    expect(env.ANTHROPIC_DEFAULT_HAIKU_MODEL).toBe("deepseek-flash");
+    expect(env.CLAUDE_CODE_SUBAGENT_MODEL).toBe("deepseek-flash");
+    expect(env.PATH).toBe("/bin");
+  });
+
+  it("un résultat en erreur qui dit « limite atteinte » devient une QuotaClaudeError", async () => {
+    const { spawner } = fakeSpawner(() => ({ result: { subtype: "error", is_error: true, result: "Usage limit reached for subscription." } }));
+    const cli = new ClaudeCli({ workDir: tempDir(), concurrency: 1, spawner });
+    const p = cli.run({ mode: "chat", model: "haiku", systemPrompt: "s", prompt: "p" });
+    await expect(p).rejects.toThrow(/Limite de l'abonnement Claude atteinte/);
+    await expect(p).rejects.toMatchObject({ name: "QuotaClaudeError", code: "quota" });
   });
 });
 

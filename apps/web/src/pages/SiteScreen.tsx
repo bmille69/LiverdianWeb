@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { api, type EtapeMeta, type Fabrication, type Passe, type RecetteAtelier, type SiteDetail, type Tour, type Unicite } from "../api.ts";
+import { api, type Demo, type EtapeMeta, type Fabrication, type Job, type Passe, type RecetteAtelier, type Site, type SiteDetail, type Tour, type Unicite } from "../api.ts";
 import { useApi, useLive } from "../live.tsx";
 import { Link } from "../router.tsx";
 import { Icon } from "../ui/Icon.tsx";
-import { Drawer, ErrorNote, PageHeader, Skeleton } from "../ui/common.tsx";
+import { Drawer, ErrorNote, formatDate, PageHeader, Skeleton } from "../ui/common.tsx";
 import { useToast } from "../ui/toasts.tsx";
-import { RECETTE_LABEL, SiteBadge } from "./labels.tsx";
+import { RECETTE_LABEL, SiteBadge, visitesLabel } from "./labels.tsx";
 import { ActivityFeed } from "./Today.tsx";
 
 // ── Petits utilitaires ──────────────────────────────────────────────────────
@@ -45,6 +45,7 @@ const PASSE: Record<Passe["etat"], { label: string; tone: string; icon: string }
 
 const ETAT_FAB: Record<Fabrication["etat"], { label: string; tone: string }> = {
   en_cours: { label: "En fabrication", tone: "blue" },
+  en_attente: { label: "En attente du quota", tone: "amber" },
   a_valider: { label: "À valider", tone: "amber" },
   validee: { label: "Validée", tone: "green" },
   arretee: { label: "Arrêtée — à revoir", tone: "red" },
@@ -103,6 +104,7 @@ export function SiteScreen({ id }: { id: string }) {
                   {recette && <Frise f={f} recette={recette} />}
                 </section>
                 <div className="fab-main">
+                  <DemoEnLigne site={s} demo={data.demo} hebergement={data.hebergement} jobs={data.jobs} onDone={reload} />
                   <Apercu siteId={s.id} disponible={data.fichiers.apercu} version={version} port={meta?.apercuPort ?? null} />
                   <Controles f={f} recette={recette} />
                   <Captures siteId={s.id} captures={data.fichiers.captures} pleinePage={data.fichiers.pleinePage} version={version} />
@@ -135,17 +137,23 @@ function Bandeau({ f, recette, liveLabel, liveLine }: { f: Fabrication; recette:
   return (
     <div className={`fab-banner tone-${ETAT_FAB[f.etat].tone}`} role="status">
       <span className="fab-banner-icon">
-        <Icon name={f.etat === "en_cours" ? "spinner" : f.etat === "arretee" ? "alert" : f.etat === "validee" ? "check-circle" : "inbox"} size={18} className={f.etat === "en_cours" ? "spin" : undefined} />
+        <Icon
+          name={f.etat === "en_cours" ? "spinner" : f.etat === "arretee" ? "alert" : f.etat === "en_attente" ? "clock" : f.etat === "validee" ? "check-circle" : "inbox"}
+          size={18}
+          className={f.etat === "en_cours" ? "spin" : undefined}
+        />
       </span>
       <div className="fab-banner-body">
         <div className="fab-banner-title">
           {f.etat === "en_cours" && <>{etape?.label ?? "…"}{f.tour > 0 && <span className="muted"> · tour de correction {f.tour}</span>}</>}
+          {f.etat === "en_attente" && "En attente : l'abonnement Claude a atteint sa limite"}
           {f.etat === "a_valider" && "Tous les contrôles passent : la maquette attend votre décision"}
           {f.etat === "validee" && "Maquette validée : démo prête pour la mise en ligne"}
           {f.etat === "arretee" && "Fabrication arrêtée — à revoir"}
         </div>
         <div className="fab-banner-sub">
           {f.etat === "en_cours" && (liveLabel || liveLine ? <span className="ellipsis">{liveLine ?? liveLabel}</span> : <span>En attente d'une place dans la file…</span>)}
+          {f.etat === "en_attente" && <span>La fabrication reprend d'elle-même (toutes les 15 minutes) ; sinon « Reprendre » ci-dessus relance tout de suite.</span>}
           {f.etat === "arretee" && <span>{f.motif}</span>}
           {(f.etat === "a_valider" || f.etat === "validee") && (
             <span>
@@ -216,7 +224,7 @@ function Actions({ siteId, f, onDone }: { siteId: string; f: Fabrication; onDone
   const peutModifier = f.etat !== "en_cours" && f.passes.some((p) => p.etape === "controles");
   return (
     <>
-      {f.etat === "arretee" && (f.motifType === "technique" || f.motifType === "annulee") && (
+      {(f.etat === "arretee" && (f.motifType === "technique" || f.motifType === "annulee") || f.etat === "en_attente") && (
         <button className="btn btn-ghost" disabled={busy} onClick={() => act("reprendre")}>
           <Icon name="play" size={15} /> Reprendre
         </button>
@@ -284,6 +292,149 @@ function Actions({ siteId, f, onDone }: { siteId: string; f: Fabrication; onDone
         </div>
       </Drawer>
     </>
+  );
+}
+
+// ── Démo en ligne (brief F) ─────────────────────────────────────────────────
+
+function DemoEnLigne({ site, demo, hebergement, jobs, onDone }: { site: Site; demo: Demo | null; hebergement: { configure: boolean; manques: string[] }; jobs: Job[]; onDone: () => void }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const [copie, setCopie] = useState(false);
+  const [confirmerRetrait, setConfirmerRetrait] = useState(false);
+  const enLigne = demo?.etat === "en_ligne";
+  const retiree = demo !== null && demo.etat !== "en_ligne";
+  const peutPublier = site.statut === "demo_prete" || site.statut === "demo_en_ligne" || site.statut === "livre";
+  const travail = jobs.find((j) => j.type.startsWith("hebergement.") && (j.state === "queued" || j.state === "running")) ?? null;
+  const act = async (what: "publier" | "retirer" | "prolonger") => {
+    setBusy(true);
+    try {
+      await api.post<{ jobId: string }>(`/api/sites/${site.id}/${what === "publier" ? "publier" : what === "retirer" ? "retirer-demo" : "prolonger-demo"}`);
+      toast.ok(what === "publier" ? "Mise en ligne lancée : suivez le travail dans la file" : what === "retirer" ? "Retrait de la démo lancé" : "Échéance repoussée de 30 jours");
+      setConfirmerRetrait(false);
+      onDone();
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const copier = async () => {
+    if (!demo) return;
+    try {
+      await navigator.clipboard.writeText(demo.url);
+      setCopie(true);
+      setTimeout(() => setCopie(false), 2000);
+    } catch {
+      toast.error("Impossible de copier : sélectionnez l'adresse à la main.");
+    }
+  };
+  if (!demo && !peutPublier && !travail && site.statut !== "a_valider") return null;
+  return (
+    <section className="panel demo-panel">
+      <header className="panel-head">
+        <h2>
+          <Icon name="sites" size={16} /> Démo en ligne
+        </h2>
+        {enLigne && (
+          <span className="push head-actions">
+            <a className="btn btn-ghost btn-sm" href={demo.url} target="_blank" rel="noreferrer">
+              <Icon name="external" size={14} /> Ouvrir la démo
+            </a>
+          </span>
+        )}
+      </header>
+      {travail ? (
+        <p className="muted">
+          <Icon name="spinner" size={13} className="spin" /> {travail.label}…
+        </p>
+      ) : enLigne ? (
+        <div className="demo-online">
+          <div className="demo-info">
+            <div className="demo-url-row">
+              <input className="demo-url mono" readOnly value={demo.url} onFocus={(e) => e.currentTarget.select()} aria-label="Adresse de la démo" />
+              <button className="btn btn-ghost btn-sm" onClick={copier}>
+                {copie ? (
+                  <>
+                    <Icon name="check" size={14} /> Copié
+                  </>
+                ) : (
+                  "Copier"
+                )}
+              </button>
+            </div>
+            <p className="small">
+              {visitesLabel(demo)}
+              {demo.apercuUrl && (
+                <>
+                  {" "}· <a href={demo.apercuUrl} target="_blank" rel="noreferrer">lien d'aperçu</a> <span className="muted">(vos visites ne comptent pas)</span>
+                </>
+              )}
+            </p>
+            <p className="small">
+              Retirée automatiquement le <strong>{formatDate(demo.expireLe)}</strong>
+            </p>
+            <div className="demo-actions">
+              <button className="btn btn-ghost btn-sm" disabled={busy} onClick={() => act("prolonger")}>
+                <Icon name="clock" size={14} /> Prolonger de 30 jours
+              </button>
+              {confirmerRetrait ? (
+                <span className="confirm-inline">
+                  <span className="muted small">Retirer la démo du web ?</span>
+                  <button className="btn btn-ghost btn-sm" onClick={() => setConfirmerRetrait(false)}>
+                    Non
+                  </button>
+                  <button className="btn btn-danger btn-sm" disabled={busy} onClick={() => act("retirer")}>
+                    Retirer
+                  </button>
+                </span>
+              ) : (
+                <button className="btn btn-danger btn-sm" disabled={busy} onClick={() => setConfirmerRetrait(true)}>
+                  <Icon name="cancel" size={14} /> Retirer la démo
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="demo-qr">
+            <img src={`/api/sites/${site.id}/qr`} alt={`QR code de la démo de ${site.companyName}`} width={120} height={120} />
+            <a href={`/api/sites/${site.id}/qr`} target="_blank" rel="noreferrer" className="muted small">
+              Agrandir
+            </a>
+          </div>
+        </div>
+      ) : (
+        <div className="stack">
+          {site.statut === "a_valider" && <p className="muted">Validez d'abord la maquette (bouton « Valider » en haut) : seules les maquettes validées peuvent être publiées.</p>}
+          {retiree && (
+            <p className="muted">
+              {demo.etat === "expiree"
+                ? `Cette démo a été retirée à l'échéance du ${formatDate(demo.expireLe)}.`
+                : `Cette démo a été retirée à votre demande${demo.retireeLe ? ` le ${formatDate(demo.retireeLe)}` : ""}.`}
+            </p>
+          )}
+          {peutPublier && (
+            <>
+              {!hebergement.configure && (
+                <div>
+                  <div className="section-label">Avant de publier</div>
+                  <ul className="bullets">
+                    {hebergement.manques.map((m) => (
+                      <li key={m}>{m}</li>
+                    ))}
+                  </ul>
+                  <p className="muted small">Tout se règle dans Réglages › Hébergement.</p>
+                </div>
+              )}
+              <div className="demo-actions">
+                <button className="btn btn-primary btn-sm" disabled={busy} onClick={() => act("publier")}>
+                  <Icon name="play" size={14} /> Mettre en ligne
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 

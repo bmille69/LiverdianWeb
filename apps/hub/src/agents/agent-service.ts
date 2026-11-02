@@ -5,10 +5,21 @@ import { now, type Db } from "../db/database.ts";
 import { HubError, notFound } from "../domain/errors.ts";
 import type { EventLog } from "../domain/events.ts";
 import type { Settings } from "../domain/settings.ts";
-import type { ClaudeCli, ClaudeEvent } from "./claude-cli.ts";
+import { ClaudeCliError, deepseekEnv, QuotaClaudeError, type ClaudeCli, type ClaudeEvent, type ClaudeRequest, type ClaudeResult } from "./claude-cli.ts";
 import type { DeepSeekClient } from "./deepseek.ts";
 import { AGENTS, getAgent, type AgentDef } from "./registry.ts";
 import type { SkillLibrary } from "./skills.ts";
+
+/** Moteur d'un appel (ADR-16) : l'abonnement Claude Code ou DeepSeek via le même CLI. */
+export type Moteur = "abonnement" | "deepseek";
+
+/** Tarifs DeepSeek ($ par million de jetons) : le coût annoncé par le CLI ne vaut que pour l'abonnement. */
+export const TARIF_DEEPSEEK = { entree: 0.27, sortie: 1.1 } as const;
+
+/** Coût d'un appel DeepSeek d'après ses jetons (le flux stream-json donne l'usage exact). */
+export function coutDeepseek(usage: { input: number; output: number }): number {
+  return (usage.input * TARIF_DEEPSEEK.entree + usage.output * TARIF_DEEPSEEK.sortie) / 1_000_000;
+}
 
 export type AgentCall = {
   id: number;
@@ -16,6 +27,8 @@ export type AgentCall = {
   agent: string;
   model: string;
   provider: string;
+  /** Moteur réellement utilisé : « abonnement » ou « deepseek » (ADR-16). */
+  engine: Moteur;
   mode: string;
   durationMs: number;
   costUsd: number | null;
@@ -152,6 +165,7 @@ export class AgentService {
       agent: String(r.agent),
       model: String(r.model),
       provider: String(r.provider),
+      engine: (r.engine as Moteur | undefined) ?? "abonnement",
       mode: String(r.mode),
       durationMs: Number(r.duration_ms),
       costUsd: (r.cost_usd as number | null) ?? null,
@@ -162,6 +176,47 @@ export class AgentService {
     }));
   }
 
+  /**
+   * Moteur choisi pour un appel sans fournisseur imposé (ADR-16) : « abonnement » directement,
+   * « deepseek » via le CLI branché sur DeepSeek, « automatique » commence par l'abonnement.
+   * La vision reste toujours sur l'abonnement : DeepSeek ne lit pas les images (vérifié le
+   * 02/11/2026 avec le vrai CLI : Read répond « format non pris en charge »). Jamais de revue à l'aveugle.
+   */
+  #choisirMoteur(opts: { vision: boolean }): { engine: Moteur; env?: NodeJS.ProcessEnv } {
+    const moteur = this.#settings.get("agents.moteur");
+    if (moteur === "deepseek") {
+      if (opts.vision) return { engine: "abonnement" };
+      const cle = this.#settings.secret("DEEPSEEK_API_KEY");
+      if (!cle) throw new HubError("Moteur DeepSeek choisi mais la clé DEEPSEEK_API_KEY est absente : enregistrez-la dans Réglages › Secrets, ou repassez sur l'abonnement.", 400);
+      return { engine: "deepseek", env: deepseekEnv(cle) };
+    }
+    return { engine: "abonnement" };
+  }
+
+  /**
+   * Appel via le CLI `claude`, quel que soit le moteur. En « automatique », quand l'abonnement répond
+   * « limite atteinte », l'appel repart aussitôt sur DeepSeek (sauf vision, qui reste sur l'abonnement
+   * et attend le rétablissement). L'échec quota est journalisé avant le repli : tout est visible.
+   */
+  async #runCli(
+    req: Omit<ClaudeRequest, "env">,
+    opts: { agent: string; vision: boolean; started: number; jobId?: string | null; summary: string; mode: string },
+  ): Promise<{ r: ClaudeResult; engine: Moteur }> {
+    const choix = this.#choisirMoteur({ vision: opts.vision });
+    try {
+      const r = await this.#cli.run({ ...req, env: choix.env });
+      return { r, engine: choix.engine };
+    } catch (err) {
+      const automatique = this.#settings.get("agents.moteur") === "automatique";
+      if (!(err instanceof QuotaClaudeError) || !automatique || opts.vision || choix.engine !== "abonnement") throw err;
+      const cle = this.#settings.secret("DEEPSEEK_API_KEY");
+      if (!cle) throw new HubError("L'abonnement Claude est à sa limite et aucune clé DeepSeek n'est enregistrée : ajoutez-en une, ou attendez le rétablissement du quota.", 503);
+      this.#record({ agent: opts.agent, model: req.model, provider: "claude", engine: "abonnement", mode: opts.mode, started: opts.started, costUsd: null, ok: false, jobId: opts.jobId, summary: opts.summary, error: (err as Error).message });
+      const r = await this.#cli.run({ ...req, env: deepseekEnv(cle) });
+      return { r, engine: "deepseek" };
+    }
+  }
+
   /** Appel sans outils (chat / structured) ou avec lecture d'images (vision). */
   async ask<T extends z.ZodType = z.ZodType<string>>(req: AskRequest<T>): Promise<AskResult<T extends z.ZodType<infer O> ? O : string>> {
     const base = this.#agent(req.agent);
@@ -170,6 +225,7 @@ export class AgentService {
     const mode = req.imagesDir ? "vision" : req.schema ? "structured" : "chat";
     const jsonSchema = req.schema ? (z.toJSONSchema(req.schema, { target: "draft-7" }) as object) : undefined;
     const started = Date.now();
+    let engine: Moteur = "abonnement";
     try {
       let text: string;
       let structured: unknown;
@@ -179,17 +235,22 @@ export class AgentService {
         const r = await this.#deepseek.structured({ model, systemPrompt: this.systemPrompt(agent.id), prompt: req.prompt, jsonSchema, timeoutMs: req.timeoutMs, signal: req.signal });
         ({ text, structured, costUsd } = r);
       } else {
-        const r = await this.#cli.run({
-          mode: req.imagesDir ? "vision" : "chat",
-          model,
-          systemPrompt: this.systemPrompt(agent.id),
-          prompt: req.imagesDir ? withImageList(req.prompt, resolve(req.imagesDir)) : req.prompt,
-          jsonSchema,
-          imagesDir: req.imagesDir ? resolve(req.imagesDir) : undefined,
-          timeoutMs: req.timeoutMs,
-          signal: req.signal,
-        });
-        ({ text, structured, costUsd } = r);
+        const { r, engine: e } = await this.#runCli(
+          {
+            mode: req.imagesDir ? "vision" : "chat",
+            model,
+            systemPrompt: this.systemPrompt(agent.id),
+            prompt: req.imagesDir ? withImageList(req.prompt, resolve(req.imagesDir)) : req.prompt,
+            jsonSchema,
+            imagesDir: req.imagesDir ? resolve(req.imagesDir) : undefined,
+            timeoutMs: req.timeoutMs,
+            signal: req.signal,
+          },
+          { agent: agent.id, vision: !!req.imagesDir, started, jobId: req.jobId, summary: req.summary ?? req.prompt.slice(0, 160), mode },
+        );
+        engine = e;
+        ({ text, structured } = r);
+        costUsd = engine === "deepseek" && r.usage ? coutDeepseek(r.usage) : r.costUsd;
       }
       let data: unknown = text;
       if (req.schema) {
@@ -197,10 +258,10 @@ export class AgentService {
         if (!parsed.success) throw new HubError(`Réponse de ${agent.nom} non conforme au schéma : ${parsed.error.issues.map((i) => `${i.path.join(".")} ${i.message}`).join(" ; ").slice(0, 300)}`, 502);
         data = parsed.data;
       }
-      this.#record({ agent: agent.id, model, provider: agent.provider, mode, started, costUsd, ok: true, jobId: req.jobId, summary: req.summary ?? req.prompt.slice(0, 160) });
+      this.#record({ agent: agent.id, model, provider: agent.provider, engine, mode, started, costUsd, ok: true, jobId: req.jobId, summary: req.summary ?? req.prompt.slice(0, 160) });
       return { text, data: data as AskResult<T extends z.ZodType<infer O> ? O : string>["data"], costUsd, model, durationMs: Date.now() - started };
     } catch (err) {
-      this.#record({ agent: agent.id, model, provider: agent.provider, mode, started, costUsd: null, ok: false, jobId: req.jobId, summary: req.summary ?? req.prompt.slice(0, 160), error: (err as Error).message });
+      this.#record({ agent: agent.id, model, provider: agent.provider, engine, mode, started, costUsd: null, ok: false, jobId: req.jobId, summary: req.summary ?? req.prompt.slice(0, 160), error: (err as Error).message });
       throw err;
     }
   }
@@ -222,32 +283,38 @@ export class AgentService {
     const runDir = join(this.#runsDir, req.jobId ?? `atelier-${Date.now()}`);
     mkdirSync(runDir, { recursive: true });
     const started = Date.now();
+    let engine: Moteur = "abonnement";
     try {
-      const r = await this.#cli.run({
-        mode: "atelier",
-        model,
-        systemPrompt: `${agent.role}\n\nTes skills sont disponibles via l'outil Skill : ${installed.join(", ") || "aucun"}. Consulte ceux qui concernent la tâche avant de commencer.`,
-        prompt: req.prompt,
-        cwd: dir,
-        timeoutMs: this.#settings.get("atelier.timeoutMinutes") * 60_000,
-        signal: req.signal,
-        onEvent: req.onEvent,
-        streamLog: join(runDir, "stream.jsonl"),
-      });
-      this.#record({ agent: agent.id, model, provider: "claude", mode: "atelier", started, costUsd: r.costUsd, ok: true, jobId: req.jobId, summary: req.summary ?? req.prompt.slice(0, 160) });
+      const { r, engine: e } = await this.#runCli(
+        {
+          mode: "atelier",
+          model,
+          systemPrompt: `${agent.role}\n\nTes skills sont disponibles via l'outil Skill : ${installed.join(", ") || "aucun"}. Consulte ceux qui concernent la tâche avant de commencer.`,
+          prompt: req.prompt,
+          cwd: dir,
+          timeoutMs: this.#settings.get("atelier.timeoutMinutes") * 60_000,
+          signal: req.signal,
+          onEvent: req.onEvent,
+          streamLog: join(runDir, "stream.jsonl"),
+        },
+        { agent: agent.id, vision: false, started, jobId: req.jobId, summary: req.summary ?? req.prompt.slice(0, 160), mode: "atelier" },
+      );
+      engine = e;
+      const costUsd = engine === "deepseek" && r.usage ? coutDeepseek(r.usage) : r.costUsd;
+      this.#record({ agent: agent.id, model, provider: "claude", engine, mode: "atelier", started, costUsd, ok: true, jobId: req.jobId, summary: req.summary ?? req.prompt.slice(0, 160) });
       if (r.denials.length) {
         this.#events.append({ type: "agent.denials", message: `${agent.nom} : ${r.denials.length} action(s) refusée(s) par les permissions`, data: { jobId: req.jobId ?? null, denials: r.denials.slice(0, 20) } });
       }
-      return { text: r.text, costUsd: r.costUsd, model, denials: r.denials };
+      return { text: r.text, costUsd, model, denials: r.denials };
     } catch (err) {
-      this.#record({ agent: agent.id, model, provider: "claude", mode: "atelier", started, costUsd: null, ok: false, jobId: req.jobId, summary: req.summary ?? req.prompt.slice(0, 160), error: (err as Error).message });
+      this.#record({ agent: agent.id, model, provider: "claude", engine, mode: "atelier", started, costUsd: null, ok: false, jobId: req.jobId, summary: req.summary ?? req.prompt.slice(0, 160), error: (err as Error).message });
       throw err;
     }
   }
 
-  #record(c: { agent: string; model: string; provider: string; mode: string; started: number; costUsd: number | null; ok: boolean; jobId?: string | null; summary: string; error?: string }): void {
+  #record(c: { agent: string; model: string; provider: string; engine: Moteur; mode: string; started: number; costUsd: number | null; ok: boolean; jobId?: string | null; summary: string; error?: string }): void {
     this.#db
-      .prepare("INSERT INTO agent_calls (at, agent, model, provider, mode, duration_ms, cost_usd, ok, job_id, summary, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .run(now(), c.agent, c.model, c.provider, c.mode, Date.now() - c.started, c.costUsd, c.ok ? 1 : 0, c.jobId ?? null, c.summary.slice(0, 300), c.error?.slice(0, 500) ?? null);
+      .prepare("INSERT INTO agent_calls (at, agent, model, provider, engine, mode, duration_ms, cost_usd, ok, job_id, summary, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .run(now(), c.agent, c.model, c.provider, c.engine, c.mode, Date.now() - c.started, c.costUsd, c.ok ? 1 : 0, c.jobId ?? null, c.summary.slice(0, 300), c.error?.slice(0, 500) ?? null);
   }
 }

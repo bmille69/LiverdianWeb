@@ -19,6 +19,7 @@ import { Settings } from "./domain/settings.ts";
 import { SiteService } from "./domain/sites.ts";
 import { JobQueue } from "./jobs/job-queue.ts";
 import { Prospection, type ProspectionOptions } from "./prospection/index.ts";
+import { Hebergement, type HebergementOptions } from "./hebergement/index.ts";
 
 export type HubOptions = {
   dataDir: string;
@@ -37,6 +38,8 @@ export type HubOptions = {
   now?: () => Date;
   /** Prospection : réseau simulé, faux serveurs, Lighthouse et Éclaireur simulés (tests). */
   prospection?: ProspectionOptions;
+  /** Hébergement des démos : fetch et wrangler simulés (tests). */
+  hebergement?: HebergementOptions;
 };
 
 export type Hub = ReturnType<typeof createHub>;
@@ -96,6 +99,15 @@ export function createHub(opts: HubOptions) {
     options: opts.prospection,
     now: opts.now,
   });
+  const hebergement = new Hebergement({
+    db,
+    events,
+    settings,
+    sites,
+    jobs,
+    dataDir: opts.dataDir,
+    options: opts.hebergement,
+  });
 
   // Essai d'un agent : une question, une réponse structurée. Prouve le câblage depuis l'interface (Équipe).
   jobs.register("agent.essai", {
@@ -136,6 +148,7 @@ export function createHub(opts: HubOptions) {
     registre,
     atelier,
     prospection,
+    hebergement,
     dataDir: opts.dataDir,
     /** Démarre la file puis rattrape les fabrications interrompues (ordre important). */
     start() {
@@ -146,9 +159,12 @@ export function createHub(opts: HubOptions) {
       const fabrications = atelier.reprendreApresDemarrage();
       // Purge RGPD des prospects non convertis et file des maquettes (les campagnes en cours repartent avec la file).
       prospection.start();
+      // Expiration des démos et relevé périodique des visites.
+      hebergement.start();
       return { ...r, fabrications };
     },
     async close() {
+      hebergement.close();
       prospection.close();
       atelier.close();
       await jobs.stop();

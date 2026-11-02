@@ -29,6 +29,23 @@ export type Company = {
 };
 
 export type SiteStatut = "brouillon" | "en_fabrication" | "a_valider" | "a_revoir" | "demo_prete" | "demo_en_ligne" | "livre" | "archive";
+/** Démo hébergée (brief F) : état de la fiche, visites relevées, échéance de retrait automatique. */
+export type Demo = {
+  siteId: string;
+  siteNom: string;
+  slug: string;
+  url: string;
+  etat: "en_ligne" | "expiree" | "retiree";
+  publieLe: string | null;
+  expireLe: string | null;
+  retireeLe: string | null;
+  visites: number;
+  derniereVisite: string | null;
+  premiereOuvertureLe: string | null;
+  dernierePublicationLe: string | null;
+  /** Lien d'aperçu qui ne compte pas la visite du propriétaire (jeton HMAC). */
+  apercuUrl?: string | null;
+};
 export type Site = {
   id: string;
   companyId: string;
@@ -43,10 +60,12 @@ export type Site = {
   updatedAt: string;
   /** Liste des sites : une vignette (capture) existe. */
   vignette?: boolean;
+  /** Fiche de la démo hébergée (null si jamais publiée). */
+  demo?: Demo | null;
 };
 
 /** Atelier : fabrication d'un site par une recette (machine à états du hub). */
-export type EtatFabrication = "en_cours" | "a_valider" | "validee" | "arretee";
+export type EtatFabrication = "en_cours" | "a_valider" | "validee" | "arretee" | "en_attente";
 export type EtatPasse = "en_file" | "en_cours" | "ok" | "echec" | "sautee" | "renvoi" | "erreur" | "arret" | "annulee";
 export type Consigne = { origine: string; texte: string };
 export type Passe = { n: number; etape: string; tour: number; etat: EtatPasse; jobId: string; creeLe: string; debut: string | null; fin: string | null; resume: string | null; sortie?: unknown };
@@ -60,7 +79,7 @@ export type Fabrication = {
   jobId: string | null;
   tour: number;
   motif: string | null;
-  motifType: "controle" | "technique" | "schema" | "annulee" | null;
+  motifType: "controle" | "technique" | "schema" | "annulee" | "quota" | null;
   exigences: string[];
   passes: Passe[];
   tours: Tour[];
@@ -75,6 +94,10 @@ export type RecetteAtelier = { id: string; nom: string; sequence: string[]; corr
 export type SiteDetail = {
   site: Site;
   fabrication: Fabrication | null;
+  /** Démo hébergée de ce site (null si jamais publiée), avec le lien d'aperçu du propriétaire. */
+  demo: Demo | null;
+  /** État de la configuration Cloudflare, et ce qui manque pour publier. */
+  hebergement: { configure: boolean; manques: string[] };
   fichiers: { apercu: boolean; vignette: boolean; captures: string[]; pleinePage: string[] };
   jobs: Job[];
   activite: HubEvent[];
@@ -135,6 +158,8 @@ export type AgentCall = {
   agent: string;
   model: string;
   provider: string;
+  /** Moteur réellement utilisé : « abonnement » ou « deepseek ». */
+  engine: "abonnement" | "deepseek";
   mode: string;
   durationMs: number;
   costUsd: number | null;
@@ -159,6 +184,17 @@ export type Meta = {
   agents: { id: string; nom: string; couleur: string; icone: string }[];
 };
 
+/** Point de contrôle du test de connexion Cloudflare : ce qui manque est dit précisément. */
+export type PointHebergement = { ok: boolean; titre: string; niveau: "ok" | "avertissement" | "erreur"; detail: string };
+export type EtatHebergement = {
+  domaine: string;
+  wranglerBin: string;
+  configure: boolean;
+  comptePresent: boolean;
+  jetonPresent: boolean;
+  demos: Demo[];
+};
+
 export type Overview = {
   entreprises: { total: number; parStatut: Record<Statut, number> };
   aValider: Site[];
@@ -168,7 +204,14 @@ export type Overview = {
 };
 
 export type Settings = {
-  settings: { "jobs.parallel": number; "agents.parallel": number; "agents.models": Record<string, string>; "atelier.timeoutMinutes": number };
+  settings: {
+    "jobs.parallel": number;
+    "agents.parallel": number;
+    "agents.models": Record<string, string>;
+    "atelier.timeoutMinutes": number;
+    "agents.moteur": "abonnement" | "deepseek" | "automatique";
+    "hebergement.domaine": string;
+  };
   deepseek: boolean;
   dataDir: string;
 };

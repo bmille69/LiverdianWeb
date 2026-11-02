@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { QuotaClaudeError } from "../src/agents/claude-cli.ts";
 import { SiteKit, type CheckReport, type KitRunner, type NewSiteResult } from "../src/atelier/kit.ts";
 import type { Contenu, Design } from "../src/atelier/schemas.ts";
 import { assembler, attribuer, verifierCoherence } from "../src/atelier/assemblage.ts";
@@ -115,6 +116,8 @@ type Scenario = {
   bloquer?: string;
   /** L'agent indiqué lève une erreur technique tant que la fonction rend vrai. */
   panne?: { agent: string; active: () => boolean };
+  /** L'agent indiqué répond « limite de l'abonnement atteinte » tant que la fonction rend vrai (ADR-16). */
+  quota?: { agent: string; active: () => boolean };
   /** Exemples du kit (examples/<nom>/site.json), inscrits au registre au démarrage. */
   exemples?: Record<string, object>;
 };
@@ -189,6 +192,7 @@ function fakeAgents(s: Scenario) {
     async ask(req: AskReq) {
       appels.push({ agent: req.agent, mode: "ask", prompt: req.prompt, imagesDir: req.imagesDir });
       await attendre(req);
+      if (s.quota?.agent === req.agent && s.quota.active()) throw new QuotaClaudeError();
       if (s.panne?.agent === req.agent && s.panne.active()) throw new Error("Claude Code n'a pas répondu en 900 s");
       let data: unknown;
       if (req.agent === "directeur-artistique") data = DESIGN;
@@ -208,6 +212,7 @@ function fakeAgents(s: Scenario) {
       writeFileSync(join(req.dir, "src", "sections", "custom", "TableauAnnote.astro"), "---\n---\n<section></section>\n");
       writeFileSync(marque, String(appels.filter((a) => a.mode === "atelier").length));
       await attendre(req);
+      if (s.quota?.agent === req.agent && s.quota.active()) throw new QuotaClaudeError();
       return { text: "Consignes appliquées.", costUsd: 0, model: "test", denials: [] };
     },
   };
@@ -480,6 +485,32 @@ describe("machine à états de l'atelier", () => {
     hub.atelier.reprendre(site.id);
     await attendre(() => hub.atelier.pourSite(site.id)!.etat !== "en_cours");
     expect(hub.atelier.pourSite(site.id)!.etat).toBe("a_valider");
+    await hub.close();
+  });
+
+  it("limite du quota : la fabrication se met en attente, la reprise automatique réessaie, la manuelle aboutit", async () => {
+    let quotaEpuise = true;
+    const { hub, company } = setup({ quota: { agent: "redacteur", active: () => quotaEpuise } });
+    const { site } = hub.atelier.lancer(company.id);
+    await attendre(() => hub.atelier.pourSite(site.id)!.etat !== "en_cours");
+    let f = hub.atelier.pourSite(site.id)!;
+    // La fabrication n'est ni arrêtée ni échouée : elle attend le rétablissement du quota.
+    expect(f.etat).toBe("en_attente");
+    expect(f.motifType).toBe("quota");
+    expect(f.etape).toBe("redaction");
+    expect(f.motif).toMatch(/Limite de l'abonnement Claude atteinte/);
+    expect(f.passes.at(-1)).toMatchObject({ etape: "redaction", etat: "erreur", resume: "Limite de l'abonnement atteinte : mise en attente" });
+    expect(hub.sites.get(site.id).statut).toBe("en_fabrication");
+    // La reprise automatique (minuteur du moteur) relance les fabrications en attente.
+    expect(hub.atelier.reprendreEnAttente()).toBe(1);
+    await attendre(() => hub.atelier.pourSite(site.id)!.etat !== "en_cours");
+    f = hub.atelier.pourSite(site.id)!;
+    expect(f.etat).toBe("en_attente"); // quota toujours épuisé : on attend encore
+    // Quota rétabli : la reprise manuelle relance l'étape et la fabrication va au bout.
+    quotaEpuise = false;
+    hub.atelier.reprendre(site.id);
+    await attendre(() => hub.atelier.pourSite(site.id)!.etat === "a_valider");
+    expect(hub.sites.get(site.id).statut).toBe("a_valider");
     await hub.close();
   });
 
