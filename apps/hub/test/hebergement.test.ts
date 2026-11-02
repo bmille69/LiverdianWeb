@@ -21,8 +21,12 @@ type FauxEtat = {
   zonePresente: boolean;
 };
 
+/** Dernier faux compte créé : le faux wrangler y « crée » le Worker au déploiement, comme le vrai. */
+let compteCourant: FauxEtat | null = null;
+
 function fauxCloudflare(): { etat: FauxEtat; fetch: (input: string | URL | Request, init?: RequestInit) => Promise<Response> } {
   const etat: FauxEtat = { dns: [], routes: [], namespaces: [], kv: new Map(), scripts: [], jetonActif: true, compteVisible: true, zonePresente: true };
+  compteCourant = etat;
   const json = (result: unknown, status = 200) => new Response(JSON.stringify({ success: true, result, errors: [] }), { status, headers: { "content-type": "application/json" } });
   const fetch = async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url);
@@ -55,6 +59,8 @@ function fauxCloudflare(): { etat: FauxEtat; fetch: (input: string | URL | Reque
     const mRoute = path.match(/^\/zones\/([^/]+)\/workers\/routes$/);
     if (mRoute) {
       if (init?.method === "POST") {
+        // Comme le vrai Cloudflare : pas de route vers un Worker qui n'a pas encore été déployé.
+        if (!etat.scripts.includes(corps.script)) return echoue("Cannot configure a route for a Worker which does not exist. Please ensure this Worker exists and try again.", 400);
         etat.routes.push({ pattern: corps.pattern, script: corps.script });
         return json({ id: "r1" });
       }
@@ -87,7 +93,10 @@ function fauxCloudflare(): { etat: FauxEtat; fetch: (input: string | URL | Reque
 
 /** Faux wrangler ET faux build Astro (même spawner) : répond ok à chaque appel. */
 function fauxWrangler() {
-  return fakeSpawner(() => ({ lines: [{ type: "info", message: "Uploaded liverdian-demos" }] }));
+  return fakeSpawner((call) => {
+    if (call.args[1] === "deploy" && compteCourant && !compteCourant.scripts.includes("liverdian-demos")) compteCourant.scripts.push("liverdian-demos");
+    return { lines: [{ type: "info", message: "Uploaded liverdian-demos" }] };
+  });
 }
 
 /** Site « demo_prete » avec un dist contenant bandeau + noindex, un site.json démo actif et un contrôle vert. */

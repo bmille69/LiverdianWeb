@@ -87,6 +87,10 @@ export function ecrireConfig(configDir: string, workerFile: string, namespaceId:
     name: "liverdian-demos",
     main: rel,
     compatibility_date: "2026-11-01",
+    // Servi uniquement par la route *.demo.<domaine> : pas d'adresse workers.dev (sur un compte neuf, wrangler
+    // voudrait d'abord en réserver une, de façon interactive) ni d'URL d'aperçu publique.
+    workers_dev: false,
+    preview_urls: false,
     // `binding` : le Worker lit les fichiers via env.ASSETS (sans lui, plantage en production).
     // `run_worker_first: true` : toute requête passe par le Worker (choix de la démo selon le Host,
     // en-têtes noindex/sécurité, compteur) — sinon /<slug>/… serait servi tel quel depuis n'importe quel sous-domaine.

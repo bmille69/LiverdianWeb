@@ -306,11 +306,14 @@ function DemoEnLigne({ site, demo, hebergement, jobs, onDone }: { site: Site; de
   const retiree = demo !== null && demo.etat !== "en_ligne";
   const peutPublier = site.statut === "demo_prete" || site.statut === "demo_en_ligne" || site.statut === "livre";
   const travail = jobs.find((j) => j.type.startsWith("hebergement.") && (j.state === "queued" || j.state === "running")) ?? null;
+  // Dernier travail d'hébergement terminé : s'il a échoué, on le dit ici (sinon le bouton réapparaît sans explication).
+  const dernier = [...jobs].filter((j) => j.type.startsWith("hebergement.") && j.finishedAt).sort((a, b) => (b.finishedAt ?? "").localeCompare(a.finishedAt ?? ""))[0] ?? null;
+  const echec = !travail && dernier?.state === "failed" ? dernier : null;
   const act = async (what: "publier" | "retirer" | "prolonger") => {
     setBusy(true);
     try {
       await api.post<{ jobId: string }>(`/api/sites/${site.id}/${what === "publier" ? "publier" : what === "retirer" ? "retirer-demo" : "prolonger-demo"}`);
-      toast.ok(what === "publier" ? "Mise en ligne lancée : suivez le travail dans la file" : what === "retirer" ? "Retrait de la démo lancé" : "Échéance repoussée de 30 jours");
+      toast.ok(what === "publier" ? "Mise en ligne lancée (une à deux minutes la première fois)" : what === "retirer" ? "Retrait de la démo lancé" : "Prolongation lancée");
       setConfirmerRetrait(false);
       onDone();
     } catch (e) {
@@ -344,6 +347,11 @@ function DemoEnLigne({ site, demo, hebergement, jobs, onDone }: { site: Site; de
           </span>
         )}
       </header>
+      {echec && (
+        <div className="error-note" role="alert">
+          {echec.label} : échec. {echec.error ?? "Raison inconnue (voir la file des travaux)."}
+        </div>
+      )}
       {travail ? (
         <p className="muted">
           <Icon name="spinner" size={13} className="spin" /> {travail.label}…

@@ -428,20 +428,24 @@ export class Hebergement {
     const client = this.#client();
     const zone = await client.zone(domaine);
     if (!zone) throw new HubError(`La zone « ${domaine} » n'est pas sur le compte Cloudflare : vérifiez la configuration.`, 500);
+    const nsId = await client.kvNamespace();
+    this.#settings.set("hebergement.kvNamespaceId", nsId);
+
+    // Le Worker d'abord : Cloudflare refuse une route vers un Worker qui n'existe pas encore
+    // (« Cannot configure a route for a Worker which does not exist », constaté à la première publication réelle).
+    const wrangler = this.#wrangler();
+    ecrireConfig(this.dirHebergement(), wrangler.workerFile, nsId, domaine);
+    const r = await wrangler.deployer((l) => ctx.log("info", l));
+    ctx.log("info", `wrangler : déploiement terminé en ${Math.round(r.dureeMs / 1000)} s`);
+    await wrangler.secrets({ APERCU_SECRET: this.#apercuSecret() });
+
+    ctx.progress({ label: "Adresse des démos (DNS et route)…", pct: 65 });
     if (!(await client.enregistrementWildcard(zone.id, `*.demo.${domaine}`)).present) {
       await client.creerWildcard(zone.id, `*.demo.${domaine}`, domaine);
     }
     if (!(await client.routeWorker(zone.id, `*.demo.${domaine}/*`)).present) {
       await client.creerRoute(zone.id, `*.demo.${domaine}/*`, "liverdian-demos");
     }
-    const nsId = await client.kvNamespace();
-    this.#settings.set("hebergement.kvNamespaceId", nsId);
-
-    const wrangler = this.#wrangler();
-    ecrireConfig(this.dirHebergement(), wrangler.workerFile, nsId, domaine);
-    const r = await wrangler.deployer((l) => ctx.log("info", l));
-    ctx.log("info", `wrangler : déploiement terminé en ${Math.round(r.dureeMs / 1000)} s`);
-    await wrangler.secrets({ APERCU_SECRET: this.#apercuSecret() });
     ctx.progress({ label: "Vérification en ligne…", pct: 75 });
 
     await this.#verifierEnLigne(url, ctx.signal);
