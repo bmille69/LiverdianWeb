@@ -185,7 +185,7 @@ ligne de design ne sort de DeepSeek seul.
 - **File de travaux** persistante : chaque action (audit, maquette, envoi) est un travail repris
   après un redémarrage, avec plafond de parallélisme et coût suivi.
 - **Hébergement des sites : Cloudflare** (gratuit à ce volume) — démos sur
-  `nom.demo.tondomaine.fr` servies par un seul Worker (suivi des visites, suppression à 30 jours
+  `nom.tondomaine.fr` servies par un seul Worker (suivi des visites, suppression à 30 jours
   automatique), sites clients en projets Pages avec leur domaine.
 - **Données personnelles** : base locale, purge auto des prospects non convertis à 6 mois,
   registre de traitement généré.

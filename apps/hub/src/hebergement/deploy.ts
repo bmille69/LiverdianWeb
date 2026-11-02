@@ -87,7 +87,7 @@ export function ecrireConfig(configDir: string, workerFile: string, namespaceId:
     name: "liverdian-demos",
     main: rel,
     compatibility_date: "2026-11-01",
-    // Servi uniquement par la route *.demo.<domaine> : pas d'adresse workers.dev (sur un compte neuf, wrangler
+    // Servi uniquement par la route *.<domaine> : pas d'adresse workers.dev (sur un compte neuf, wrangler
     // voudrait d'abord en réserver une, de façon interactive) ni d'URL d'aperçu publique.
     workers_dev: false,
     preview_urls: false,
@@ -96,8 +96,8 @@ export function ecrireConfig(configDir: string, workerFile: string, namespaceId:
     // en-têtes noindex/sécurité, compteur) — sinon /<slug>/… serait servi tel quel depuis n'importe quel sous-domaine.
     assets: { directory: "./demos", binding: "ASSETS", run_worker_first: true },
     kv_namespaces: [{ binding: "DEMOS", id: namespaceId }],
-    // Le Worker attend le suffixe complet des démos (il découpe `<slug>` devant).
-    vars: { DEMO_DOMAINE: `demo.${domaine}` },
+    // Le Worker découpe `<slug>` devant le domaine (`<slug>.<domaine>`).
+    vars: { DEMO_DOMAINE: domaine },
   };
   const file = join(configDir, "wrangler.jsonc");
   writeFileSync(file, JSON.stringify(conf, null, 2) + "\n", "utf8");

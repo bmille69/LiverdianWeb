@@ -80,7 +80,7 @@ export class Cloudflare {
     return { present: r.some((x) => x.pattern === pattern) };
   }
 
-  /** Route du Worker sur `*.demo.<domaine>/*`. */
+  /** Route du Worker sur `*.<domaine>/*`. */
   async creerRoute(zoneId: string, pattern: string, script: string): Promise<void> {
     await this.#api(`/zones/${zoneId}/workers/routes`, { method: "POST", body: JSON.stringify({ pattern, script }) });
   }

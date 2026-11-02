@@ -1,6 +1,7 @@
 /**
  * Hébergement des démos (brief F, ADR-15) : chaque maquette validée part en un clic sur
- * `https://<slug>.demo.<domaine>` (un seul Worker Cloudflare « liverdian-demos » + Static Assets,
+ * `https://<slug>.<domaine>` (un seul niveau : le certificat gratuit de Cloudflare ne couvre que `*.<domaine>`)
+ * (un seul Worker Cloudflare « liverdian-demos » + Static Assets,
  * une route par sous-domaine), disparaît automatiquement à J+30, et ses visites sont comptées
  * par le Worker dans Workers KV puis relevées ici (sans IP ni donnée personnelle).
  */
@@ -16,7 +17,7 @@ import type { Site, SiteService } from "../domain/sites.ts";
 import type { JobContext, JobQueue } from "../jobs/job-queue.ts";
 import { Cloudflare, CloudflareError, type FetchLike } from "./cloudflare.ts";
 import { Wrangler, ecrireConfig, runProcess, wranglerDuDepot } from "./deploy.ts";
-import { slugifier, slugUnique } from "./slug.ts";
+import { SLUGS_RESERVES, slugifier, slugUnique } from "./slug.ts";
 import type { Spawner } from "../agents/claude-cli.ts";
 
 /** Limites publiées des Static Assets de Cloudflare : refus avant de les dépasser, message clair. */
@@ -289,18 +290,18 @@ export class Hebergement {
 
     if (zoneId) {
       try {
-        const r = await client.enregistrementWildcard(zoneId, `*.demo.${domaine}`);
+        const r = await client.enregistrementWildcard(zoneId, `*.${domaine}`);
         ajoute(r.present
-          ? { ok: true, niveau: "ok", titre: "Adresses *.demo", detail: `L'enregistrement « *.demo.${domaine} » existe déjà.` }
-          : { ok: true, niveau: "avertissement", titre: "Adresses *.demo", detail: `L'enregistrement « *.demo.${domaine} » sera créé à la première publication (permission Zone › DNS › Edit nécessaire).` });
+          ? { ok: true, niveau: "ok", titre: "Adresses des démos", detail: `L'enregistrement « *.${domaine} » existe déjà.` }
+          : { ok: true, niveau: "avertissement", titre: "Adresses des démos", detail: `L'enregistrement « *.${domaine} » sera créé à la première publication (permission Zone › DNS › Edit nécessaire).` });
       } catch (err) {
         const e = err as CloudflareError;
-        ajoute({ ok: false, niveau: "erreur", titre: "Adresses *.demo", detail: `Impossible de consulter les enregistrements DNS (${e.message}) : il faut la permission Zone › DNS › Read.` });
+        ajoute({ ok: false, niveau: "erreur", titre: "Adresses des démos", detail: `Impossible de consulter les enregistrements DNS (${e.message}) : il faut la permission Zone › DNS › Read.` });
       }
       try {
-        const r = await client.routeWorker(zoneId, `*.demo.${domaine}/*`);
+        const r = await client.routeWorker(zoneId, `*.${domaine}/*`);
         ajoute(r.present
-          ? { ok: true, niveau: "ok", titre: "Route du Worker", detail: "La route « *.demo.<domaine>/* » vers le Worker existe déjà." }
+          ? { ok: true, niveau: "ok", titre: "Route du Worker", detail: "La route « *.<domaine>/* » vers le Worker existe déjà." }
           : { ok: true, niveau: "avertissement", titre: "Route du Worker", detail: "La route sera créée à la première publication (permission Zone › Workers Routes › Edit nécessaire)." });
       } catch (err) {
         const e = err as CloudflareError;
@@ -409,9 +410,9 @@ export class Hebergement {
 
     // Slug : conservé si la démo a déjà été publiée, sinon forgé du nom commercial (unique, sans accents).
     let demo = this.demoDe(siteId);
-    const slug = demo?.slug ?? slugUnique(slugifier(site.companyName), new Set(this.demos().map((d) => d.slug)));
+    const slug = demo?.slug ?? slugUnique(slugifier(site.companyName), new Set([...SLUGS_RESERVES, ...this.demos().map((d) => d.slug)]));
     const domaine = this.#domaine();
-    const url = `https://${slug}.demo.${domaine}/`;
+    const url = `https://${slug}.${domaine}/`;
     // Republication d'une démo en ligne : on garde son échéance ; sinon J+30 à partir d'aujourd'hui.
     const expireLe = demo?.etat === "en_ligne" && demo.expireLe ? demo.expireLe : this.#echeance();
     // La maquette a été fabriquée plus tôt : son bandeau porte « fabrication + 30 j ». On l'aligne sur le retrait réel.
@@ -440,11 +441,11 @@ export class Hebergement {
     await wrangler.secrets({ APERCU_SECRET: this.#apercuSecret() });
 
     ctx.progress({ label: "Adresse des démos (DNS et route)…", pct: 65 });
-    if (!(await client.enregistrementWildcard(zone.id, `*.demo.${domaine}`)).present) {
-      await client.creerWildcard(zone.id, `*.demo.${domaine}`, domaine);
+    if (!(await client.enregistrementWildcard(zone.id, `*.${domaine}`)).present) {
+      await client.creerWildcard(zone.id, `*.${domaine}`, domaine);
     }
-    if (!(await client.routeWorker(zone.id, `*.demo.${domaine}/*`)).present) {
-      await client.creerRoute(zone.id, `*.demo.${domaine}/*`, "liverdian-demos");
+    if (!(await client.routeWorker(zone.id, `*.${domaine}/*`)).present) {
+      await client.creerRoute(zone.id, `*.${domaine}/*`, "liverdian-demos");
     }
     ctx.progress({ label: "Vérification en ligne…", pct: 75 });
 

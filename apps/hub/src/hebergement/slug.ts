@@ -20,3 +20,9 @@ export function slugUnique(base: string, pris: Set<string>): string {
   for (let n = 2; pris.has(s); n++) s = `${base.slice(0, 63 - String(n).length - 1)}-${n}`;
   return s;
 }
+
+/**
+ * Sous-domaines jamais attribués à une démo : les démos vivent directement sous le domaine
+ * (`<slug>.<domaine>`, seul niveau couvert par le certificat gratuit de Cloudflare).
+ */
+export const SLUGS_RESERVES: readonly string[] = ["www", "mail", "smtp", "imap", "pop", "webmail", "mx", "ftp", "demo", "demos", "app", "api", "admin", "hub", "blog", "contact", "shop", "boutique", "status", "liverdian", "autoconfig", "autodiscover"];

@@ -32,8 +32,8 @@ function fauxCloudflare(): { etat: FauxEtat; fetch: (input: string | URL | Reque
     const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url);
     const path = url.pathname.replace(/^\/client\/v4/, "");
     // Vérification « en vrai » d'une démo publiée : la page doit répondre avec son bandeau.
-    const demo = /^https:\/\/([a-z0-9-]+)\.demo\.mondomaine\.fr/.exec(url.toString());
-    if (demo && url.hostname.endsWith("demo.mondomaine.fr")) {
+    const demo = /^https:\/\/([a-z0-9-]+).mondomaine\.fr/.exec(url.toString());
+    if (demo && url.hostname.endsWith("mondomaine.fr")) {
       return new Response(`<!doctype html><html><head><meta name="robots" content="noindex, nofollow"></head><body><div data-bandeau-demo>Maquette réalisée par Liverdian</div><h1>${demo[1]}</h1></body></html>`, {
         headers: { "content-type": "text/html; charset=utf-8" },
       });
@@ -178,7 +178,7 @@ describe("hébergement des démos", () => {
 
     const demo = hub.hebergement.demoDe(site.id)!;
     expect(demo.slug).toBe("lumen-elec");
-    expect(demo.url).toBe("https://lumen-elec.demo.mondomaine.fr/");
+    expect(demo.url).toBe("https://lumen-elec.mondomaine.fr/");
     expect(demo.etat).toBe("en_ligne");
     expect(demo.expireLe).not.toBeNull();
     expect(hub.sites.get(site.id).statut).toBe("demo_en_ligne");
@@ -188,8 +188,8 @@ describe("hébergement des démos", () => {
 
     // L'assemblage contient le dist sous le slug ; le DNS, la route et le KV ont été créés.
     expect(readFileSync(join(demosDir(hub), "lumen-elec", "index.html"), "utf8")).toContain("data-bandeau-demo");
-    expect(etat.dns).toContainEqual({ name: "*.demo.mondomaine.fr", content: "mondomaine.fr" });
-    expect(etat.routes.some((r) => r.pattern === "*.demo.mondomaine.fr/*" && r.script === "liverdian-demos")).toBe(true);
+    expect(etat.dns).toContainEqual({ name: "*.mondomaine.fr", content: "mondomaine.fr" });
+    expect(etat.routes.some((r) => r.pattern === "*.mondomaine.fr/*" && r.script === "liverdian-demos")).toBe(true);
     expect(etat.namespaces.some((n) => n.title === "liverdian-demos")).toBe(true);
     expect(etat.kv.get("d:lumen-elec")).toContain('"en_ligne"');
 
@@ -201,7 +201,7 @@ describe("hébergement des démos", () => {
 
     // La configuration déployée donne au Worker le suffixe complet (il découpe le slug devant).
     const conf = JSON.parse(readFileSync(join(hub.dataDir, "hebergement", "wrangler.jsonc"), "utf8"));
-    expect(conf.vars.DEMO_DOMAINE).toBe("demo.mondomaine.fr");
+    expect(conf.vars.DEMO_DOMAINE).toBe("mondomaine.fr");
 
     // Le jeton d'aperçu est le HMAC du slug, calculé comme dans le Worker.
     const jeton = hub.hebergement.apercuJeton("lumen-elec");
@@ -349,7 +349,7 @@ describe("hébergement des démos", () => {
     const titres = r.points.map((p) => p.titre);
     expect(titres).toContain("Jeton Cloudflare");
     expect(titres).toContain("Zone « mondomaine.fr »");
-    expect(titres).toContain("Adresses *.demo");
+    expect(titres).toContain("Adresses des démos");
     expect(titres).toContain("Route du Worker");
     expect(r.points.filter((p) => p.niveau === "erreur")).toHaveLength(0);
 
@@ -378,5 +378,14 @@ describe("hébergement des démos", () => {
     // Format invalide refusé.
     expect(() => hub.hebergement.enregistrerSecret("CLOUDFLARE_ACCOUNT_ID", "court")).toThrow(HubError);
     hub.close();
+  });
+});
+
+describe("adresses des démos", () => {
+  it("un seul niveau sous le domaine (certificat gratuit Cloudflare) et jamais un sous-domaine réservé", async () => {
+    const { SLUGS_RESERVES, slugUnique, slugifier } = await import("../src/hebergement/slug.ts");
+    expect(slugUnique(slugifier("WWW"), new Set(SLUGS_RESERVES))).toBe("www-2");
+    expect(slugUnique(slugifier("Mail"), new Set(SLUGS_RESERVES))).toBe("mail-2");
+    expect(slugifier("Lumen Élec")).toBe("lumen-elec");
   });
 });

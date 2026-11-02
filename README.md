@@ -112,7 +112,7 @@ Relancez ensuite une campagne : les réponses déjà obtenues sont en cache, seu
 
 ### Mettre les démos en ligne
 
-Une maquette **validée** se publie en un clic sur `https://<nom>.demo.votre-domaine.fr` : le client la voit dans son
+Une maquette **validée** se publie en un clic sur `https://<nom>.votre-domaine.fr` : le client la voit dans son
 navigateur, sans rien installer. Elle est retirée automatiquement après 30 jours (date affichée), et n'apparaît
 jamais dans Google. Il faut une fois, avant la première publication :
 

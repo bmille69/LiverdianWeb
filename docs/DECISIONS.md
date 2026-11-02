@@ -375,7 +375,7 @@ images ; deux sites très différents sur le papier mais proches à l'œil passe
 ## ADR-15 — Hébergement des démos : un Worker pour tous les sous-domaines, compteur de visites en KV (brief F, 2 nov. 2026)
 
 **Contexte.** Une maquette validée doit pouvoir être montrée au client avant la vente : une URL publique propre
-(`https://<slug>.demo.<domaine>`) publiée en un clic depuis l'écran du site, retirée automatiquement après 30 jours,
+(`https://<slug>.<domaine>`, un seul niveau : le certificat gratuit de Cloudflare ne couvre que `*.<domaine>` — la première version en `*.demo.<domaine>` échouait en HTTPS, constaté à la première publication réelle ; sous-domaines réservés jamais attribués) publiée en un clic depuis l'écran du site, retirée automatiquement après 30 jours,
 sans serveur à payer ni opération à connaître (le propriétaire est non développeur). Le hub tourne sur le PC du
 propriétaire : l'infrastructure ne peut être que statique et gratuite.
 
@@ -385,7 +385,7 @@ propriétaire : l'infrastructure ne peut être que statique et gratuite.
   direct). Une démo = un dossier `.data/hebergement/demos/<slug>` ; le Worker sert `<slug>/<chemin>`, `index.html` pour
   les dossiers, une 404 en français, et une page 410 « Cette maquette a expiré » quand les fichiers n'existent plus et
   que la fiche KV dit la démo retirée ou expirée.
-- **Route et DNS créés par le hub** via l'API Cloudflare (route `*.demo.<domaine>/*` et enregistrement DNS wildcard),
+- **Route et DNS créés par le hub** via l'API Cloudflare (route `*.<domaine>/*` et enregistrement DNS wildcard),
   de façon idempotente à chaque publication et vérifiés par « Tester la connexion » : il faut les deux, l'un sans
   l'autre ne suffit pas (constaté).
 - **Déploiement par `wrangler deploy` en dépendance du hub** (rien à installer globalement). Le jeton Cloudflare ne

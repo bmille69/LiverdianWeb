@@ -2,7 +2,7 @@
  * Worker « liverdian-demos » (ADR-15) : sert toutes les démos publiées du hub.
  *
  * Un seul Worker avec Static Assets : chaque démo est un dossier `<slug>/` de l'assemblage
- * (`.data/hebergement/demos/`). L'en-tête `Host` donne le slug (`<slug>.demo.<domaine>`),
+ * (`.data/hebergement/demos/`). L'en-tête `Host` donne le slug (`<slug>.<domaine>`),
  * le Worker réécrit le chemin en `/<slug>/<chemin>` et laisse les assets répondre.
  *
  * - Visites : comptées par slug dans Workers KV (`v:<slug>`), sans IP ni donnée personnelle.
@@ -54,13 +54,13 @@ function constantTimeEqual(a: string, b: string): boolean {
   return d === 0;
 }
 
-/** Lit l'en-tête Host et en tire le slug (`<slug>.demo.<domaine>`), ou null. */
+/** Lit l'en-tête Host et en tire le slug (`<slug>.<domaine>`), ou null. */
 export function slugDuHost(host: string, domaine: string): string | null {
   const suffix = `.${domaine.toLowerCase()}`;
   const h = host.toLowerCase().replace(/:\d+$/, "");
   if (!h.endsWith(suffix)) return null;
   const slug = h.slice(0, -suffix.length);
-  if (!SLUG_RE.test(slug) || slug === "www") return null;
+  if (!SLUG_RE.test(slug) || slug.includes(".") || slug === "www") return null;
   return slug;
 }
 

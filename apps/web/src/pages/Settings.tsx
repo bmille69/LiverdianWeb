@@ -220,7 +220,7 @@ function HebergementDemos() {
         <div>
           <div className="setting-title">Domaine</div>
           <div className="setting-desc">
-            Chaque maquette validée se publie en un clic sur <code>&lt;nom&gt;.demo.{domaine.trim() || "votre-domaine.fr"}</code>, retirée automatiquement après 30 jours. Le hub
+            Chaque maquette validée se publie en un clic sur <code>&lt;nom&gt;.{domaine.trim() || "votre-domaine.fr"}</code>, retirée automatiquement après 30 jours. Le hub
             crée lui-même la route Cloudflare à la première publication.
           </div>
         </div>
